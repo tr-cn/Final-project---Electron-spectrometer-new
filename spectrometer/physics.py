@@ -1,10 +1,24 @@
 import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+#plt.rcParams.update({
+#   'font.family': 'serif',
+#  'font.serif': ['Times New Roman', 'Times', 'DejaVu Serif'],
+# 'mathtext.fontset': 'stix'  # Matches Times New Roman math styles seamlessly
+#})
+
+from matplotlib.ticker import MaxNLocator, FormatStrFormatter
+
+
+
+
 me_kg = 9.109*1e-31
-B_T = np.array([0,0.5,0])
-E_V0m = 0
+B_T = np.array([0,0,0.5])
+E_V0m = np.array([0,0,0])
 R0 = np.array([0,0,0])
 e_C = 1.602*1e-19
-e_eng_MeV = 10
+e_eng_MeV = np.array([0,10,0])
 height_mm =26; width_mm = 12.5; depth_mm   = 50.8
 
 
@@ -41,20 +55,21 @@ def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0):
     v_vec_m0s = list([]); gamma_vec = list([]); R_vec_mm = list([]); 
     v_vec_m0s.append(v0_m0s); gamma_vec.append(gamma); R_vec_mm.append(R0);
     
-    CFL = 0.5; dx_m = 1e-6; dt_s = dx_m*CFL; # not realy neaded in euler
+    CFL = 0.0000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
     while R_vec_mm[-1][2] < h_mm and R_vec_mm[-1][1] < d_mm and abs(R_vec_mm[-1][0]) < abs (w_mm):
-        
+        gamma = vel2gamma(v_vec_m0s[-1])
         v_m0s = np.array(v_vec_m0s[-1]); 
-        dv_m0s = E_V0m*dt_s + q_C*np.cross(v_m0s,B_T)
-        dr_m = dv_m0s*dt_s;
+        dv_m0s= (q_C/(gamma*m_kg)) * (E_V0m + np.cross(v_m0s,B_T))*dt_s
         
-        v_new_m0s = v_m0s + dv_m0s;   gamma = vel2gamma(v_m0s);
-        v_fixed_m0s = v_new_m0s*gamma
+        v_new_m0s = v_m0s + dv_m0s;   
+        #print(v_new_m0s)
+        v_fixed_m0s = v_new_m0s
+        
+        dr_m = v_fixed_m0s*dt_s;
         
         v_vec_m0s.append(v_fixed_m0s)
         R_vec_mm.append(R_vec_mm[-1] + dr_m*1e-3)
         gamma_vec.append(gamma)
-        
         
     return R_vec_mm,v_vec_m0s,gamma_vec
         
@@ -64,7 +79,7 @@ def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0):
 
 R_vec_mm,v_vec_m0s,gamma_vec = euler (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
 
-    
+
     
     
     
