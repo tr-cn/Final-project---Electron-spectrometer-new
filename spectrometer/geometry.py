@@ -104,6 +104,6 @@ def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm
 
     ax.view_init(elev=15, azim=335)
     ax.dist = 9
-    plt.show()
+    #plt.show()
     
     return fig, ax

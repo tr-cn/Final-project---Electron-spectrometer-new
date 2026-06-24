@@ -13,13 +13,6 @@ from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
 
 
-me_kg = 9.109*1e-31
-B_T = np.array([0,0,0.5])
-E_V0m = np.array([0,0,0])
-R0 = np.array([0,0,0])
-e_C = 1.602*1e-19
-e_eng_MeV = np.array([0,10,0])
-height_mm =26; width_mm = 12.5; depth_mm   = 50.8
 
 
 def analitic_sol_vel2dist (q_eng_MeV, m_kg, q_C, height_mm, B_T):
@@ -44,10 +37,12 @@ def vel2gamma (v_m0s):
     v0_mag_m0s = np.linalg.norm(v_m0s)
     return 1 / np.sqrt ( 1 - (v0_mag_m0s/c_m0s)**2 )
 
+
+
 def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0):
     h_mm = height_mm/2; d_mm = depth_mm; w_mm = width_mm/2;
     
-    q_eng_J = q_eng_MeV*1e6 * 1.602*1e-19
+    q_eng_J = abs(q_eng_MeV)*1e6 * 1.602*1e-19
     c_m0s = 299792458
     v0_m0s = c_m0s*np.sqrt ( 1 - ( m_kg*c_m0s**2 / (q_eng_J + m_kg*c_m0s**2) )**2 )# [m/s]
     gamma = vel2gamma(v0_m0s);
@@ -55,29 +50,29 @@ def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0):
     v_vec_m0s = list([]); gamma_vec = list([]); R_vec_mm = list([]); 
     v_vec_m0s.append(v0_m0s); gamma_vec.append(gamma); R_vec_mm.append(R0);
     
-    CFL = 0.0000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
+    #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
+    T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
+    dt_s = T_cyclotron/1000
     while R_vec_mm[-1][2] < h_mm and R_vec_mm[-1][1] < d_mm and abs(R_vec_mm[-1][0]) < abs (w_mm):
         gamma = vel2gamma(v_vec_m0s[-1])
         v_m0s = np.array(v_vec_m0s[-1]); 
-        dv_m0s= (q_C/(gamma*m_kg)) * (E_V0m + np.cross(v_m0s,B_T))*dt_s
+        dv_m0s= (q_C/(gamma*m_kg)) * (E_V0m + np.cross(v_m0s,B_T) -  np.dot(v_m0s,np.dot(E_V0m, v_m0s)) /c_m0s**2 )
         
-        v_new_m0s = v_m0s + dv_m0s;   
+        v_new_m0s = v_m0s + dv_m0s*dt_s
         #print(v_new_m0s)
         v_fixed_m0s = v_new_m0s
         
         dr_m = v_fixed_m0s*dt_s;
         
         v_vec_m0s.append(v_fixed_m0s)
-        R_vec_mm.append(R_vec_mm[-1] + dr_m*1e-3)
+        R_vec_mm.append(R_vec_mm[-1] + dr_m*1e3)
         gamma_vec.append(gamma)
         
     return R_vec_mm,v_vec_m0s,gamma_vec
         
-        
-        
 
 
-R_vec_mm,v_vec_m0s,gamma_vec = euler (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
+#R_vec_mm,v_vec_m0s,gamma_vec = euler (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
 
 
     
