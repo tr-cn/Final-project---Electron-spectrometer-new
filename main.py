@@ -26,6 +26,18 @@ if __name__ == "__main__":
 
 
     ig,ax  = geometry()
-    R_vec_mm,v_vec_m0s,gamma_vec = phys.euler (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
     
+    Z_mm = phys.analitic_sol_vel2dist (e_eng_MeV[1], me_kg, e_C, height_mm, B_T[0])
+    print(Z_mm)
+    R_vec_mm,v_vec_m0s,gamma_vec = phys.euler (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
     pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
+    R_vec_mm,v_vec_m0s,gamma_vec = phys.RK2 (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
+    R_vec_mm,v_vec_m0s,gamma_vec = phys.RK4 (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
+    R_vec_mm,v_vec_m0s,gamma_vec = phys.Boris_pusher (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0)
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
