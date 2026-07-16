@@ -10,7 +10,7 @@ import numpy as np
 from spectrometer.geometry import geometry
 import spectrometer.integrators as integ
 import spectrometer.plot_result as pr
-
+import spectrometer.fields as fields
 
 
 
@@ -44,3 +44,9 @@ if __name__ == "__main__":
     R_vec_mm,v_vec_m0s,gamma_vec = integ.Boris_pusher (e_eng_MeV, me_kg, e_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps )
     pr.trajectory_plot(ax, R_vec_mm)
     print(R_vec_mm[-1])
+    
+    
+    mag = fields.Magenetic_field(B_T[0], width_mm, depth_mm, k=0, fringe=1, sharp_edge=1)
+    
+    fields.plot_magnetic_quiver(ax, mag, width_mm, depth_mm, height_mm)
+    
