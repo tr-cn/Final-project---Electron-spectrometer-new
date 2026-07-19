@@ -24,6 +24,7 @@ if __name__ == "__main__":
     e_eng_MeV = np.array([0,10,0])
     height_mm =26; width_mm = 12.5; depth_mm   = 50.8
     steps = 150
+    yoke = 1
 
     ig,ax  = geometry()
     
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     print(R_vec_mm[-1])
     
     
-    mag = fields.Magenetic_field(B_T[0], width_mm, depth_mm, k=0, fringe=1, sharp_edge=1)
+    mag = fields.Magenetic_field(B_T[0], width_mm, depth_mm, k=0, fringe=1, sharp_edge=1, yoke=yoke)
     
-    fields.plot_magnetic_quiver(ax, mag, width_mm, depth_mm, height_mm)
+    fields.plot_magnetic_quiver(ax, mag, width_mm, depth_mm, height_mm, yoke)
     
