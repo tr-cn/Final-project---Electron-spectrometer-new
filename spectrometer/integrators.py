@@ -54,11 +54,15 @@ def get_electric_field (E_type, dx_mm, dy_mm, dz_mm): # Need to think how to do 
     return
 
 
-def is_in_spectrometer(R_current_m,h_m,d_m,w_m):
-    return abs(R_current_m[2]) < h_m and R_current_m[1] < d_m and R_current_m[1]>=0 and abs(R_current_m[0]) < abs (w_m)
+def is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+    if  R_current_m[1]<=0:
+        pinhole_rad_m = pinhole_dia_mm*1e-3/2
+        return abs(R_current_m[2]) < pinhole_rad_m  and abs(R_current_m[0]) < pinhole_rad_m
+    
+    return abs(R_current_m[2]) < h_m and R_current_m[1] < d_m and abs(R_current_m[0]) < abs (w_m)
     
 
-def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps ):
+def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm,pinhole_dia_mm, fringe):
     h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
     
     v0_m0s = MeV2m0s(q_eng_MeV, m_kg); v_current_m0s=v0_m0s;
@@ -72,7 +76,14 @@ def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_m
     #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
     T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
     dt_s = T_cyclotron/steps
-    while is_in_spectrometer(R_current_m,h_m,d_m,w_m):
+    B_in_T = B_T;
+    B_zero_T = np.array([0,0,0])
+    
+    while is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+        
+        B_T = B_in_T
+        if fringe==0 and R_current_m[1]<0:
+            B_T = B_zero_T  
         
         gamma = gamma_current
         v_m0s = v_current_m0s
@@ -95,7 +106,7 @@ def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_m
     return R_vec_mm,v_vec_m0s,gamma_vec
         
 
-def RK2 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps ):
+def RK2 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm, pinhole_dia_mm, fringe):
     h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
     
     v0_m0s = MeV2m0s(q_eng_MeV, m_kg); v_current_m0s=v0_m0s;
@@ -109,7 +120,13 @@ def RK2 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm,
     #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
     T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
     dt_s = T_cyclotron/steps
-    while is_in_spectrometer(R_current_m,h_m,d_m,w_m):
+    B_in_T = B_T;
+    B_zero_T = np.array([0,0,0])
+    while is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+        
+        B_T = B_in_T
+        if fringe==0 and R_current_m[1]<0:
+            B_T = B_zero_T 
         
       
         v_m0s_i = v_current_m0s; 
@@ -149,7 +166,7 @@ def RK2 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm,
     return R_vec_mm,v_vec_m0s,gamma_vec
         
 
-def RK4 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps ):
+def RK4 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm,pinhole_dia_mm, fringe):
     h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
     
     v0_m0s = MeV2m0s(q_eng_MeV, m_kg); v_current_m0s=v0_m0s;
@@ -163,7 +180,13 @@ def RK4 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm,
     #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
     T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
     dt_s = T_cyclotron/steps
-    while is_in_spectrometer(R_current_m,h_m,d_m,w_m):
+    B_in_T = B_T;
+    B_zero_T = np.array([0,0,0])
+    while is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+        
+        B_T = B_in_T
+        if fringe==0 and R_current_m[1]<0:
+            B_T = B_zero_T 
         
       
         v_m0s_i = v_current_m0s; 
@@ -226,7 +249,7 @@ def RK4 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm,
     return R_vec_mm,v_vec_m0s,gamma_vec
         
 
-def Boris_pusher (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps ):
+def Boris_pusher (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm,pinhole_dia_mm, fringe):
     
     h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
     
@@ -234,6 +257,12 @@ def Boris_pusher (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0
     T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma_0*m_kg) )**-1
     dt_s = T_cyclotron/steps
     
+    
+    B_in_T = B_T;
+    B_zero_T = np.array([0,0,0])
+    
+    if fringe==0 and R0_mm[1]*1e-3<0:
+        B_T = B_zero_T
     
     v0_m0s = MeV2m0s(q_eng_MeV, m_kg)
     dv_dt_0_m0s2 = get_lorentz_acceleration(q_C,gamma_0,m_kg,E_V0m,v0_m0s,B_T)
@@ -255,8 +284,12 @@ def Boris_pusher (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0
     
        
     
-    while is_in_spectrometer(R_current_m,h_m,d_m,w_m):
+
+    while is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
         
+        B_T = B_in_T
+        if fringe==0 and R_current_m[1]<0:
+            B_T = B_zero_T
         v_minus_half_m0s = v_current_m0s
         gamma_i = gamma_current
         R_m_i = R_current_m 

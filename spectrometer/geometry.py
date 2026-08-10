@@ -11,7 +11,7 @@ plt.rcParams.update({
 from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
 
-def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm =3, shield_mm = 0):
+def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm =3, shield_mm = 0, yoke=1, shiled=0):
     pinhole_radius_mm = pinhole_dia_mm/2
     fig = plt.figure()
     
@@ -47,10 +47,12 @@ def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm
     ax.plot([-width_mm/2, width_mm/2],   [0, 0], [height_mm/2, height_mm/2],   color='black', linewidth=2)
     ax.plot([-width_mm/2, -width_mm/2], [0, 0], [-height_mm/2, height_mm/2],   color='black', linewidth=2)
     ax.plot([width_mm/2, width_mm/2],   [0, 0], [-height_mm/2, height_mm/2],   color='black', linewidth=2)
+    
 
     # E-spec end 
-    ax.plot([-width_mm/2, width_mm/2],   [depth_mm, depth_mm], [-height_mm/2, -height_mm/2], color='black', linewidth=2)
-    ax.plot([-width_mm/2, width_mm/2],   [depth_mm, depth_mm], [height_mm/2, height_mm/2],   color='black', linewidth=2)
+    if yoke:
+        ax.plot([-width_mm/2, width_mm/2],   [depth_mm, depth_mm], [-height_mm/2, -height_mm/2], color='black', linewidth=2)
+        ax.plot([-width_mm/2, width_mm/2],   [depth_mm, depth_mm], [height_mm/2, height_mm/2],   color='black', linewidth=2)
     ax.plot([-width_mm/2, -width_mm/2], [depth_mm, depth_mm], [-height_mm/2, height_mm/2],   color='black', linewidth=2)
     ax.plot([width_mm/2, width_mm/2],   [depth_mm, depth_mm], [-height_mm/2, height_mm/2],   color='black', linewidth=2)
 
@@ -79,9 +81,9 @@ def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm
         ax.plot([width_mm/2, width_mm/2],   [-shield_mm, 0], [-height_mm/2, -height_mm/2], color='gray', linewidth=2)
 
         #Shiled entry hole
-        theta = np.linspace(0, 2*np.pi, 1001)
-        ax.plot(pinhole_radius_mm * np.cos(theta), np.zeros_like(theta)-shield_mm, pinhole_radius_mm * np.sin(theta), color='gray', linewidth=2)
-
+        theta = np.linspace(0, 100*2*np.pi, 100001)
+        # ax.plot(pinhole_radius_mm * np.cos(theta), np.zeros_like(theta)-shield_mm, pinhole_radius_mm * np.sin(theta), color='gray', linewidth=2)
+        ax.plot(pinhole_radius_mm * np.cos(theta), np.linspace(-shield_mm,0,len(theta)), pinhole_radius_mm * np.sin(theta), color='gray', linewidth=2)
 
 
 
