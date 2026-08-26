@@ -18,7 +18,7 @@ import spectrometer.fields as fields
 
 if __name__ == "__main__":
     me_kg = 9.109*1e-31
-    B_T = np.array([0.5,0,0])
+    B_T = np.array([0.5,0.0,0.0])
     E_V0m = np.array([0,0,0])
     R0_mm  = np.array([0,-12.5,0])
     e_C = -1.602*1e-19
