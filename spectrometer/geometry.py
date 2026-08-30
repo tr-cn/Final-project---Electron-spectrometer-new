@@ -15,16 +15,16 @@ def  geometry (height_mm =26, width_mm = 12.5, depth_mm   = 50.8, pinhole_dia_mm
     pinhole_radius_mm = pinhole_dia_mm/2
     fig = plt.figure()
     
-    manager = plt.get_current_fig_manager()
-    try:
-        # Works perfectly on Spyder's default backend (Qt) and Windows/Linux/Mac
-        manager.window.showMaximized()
-    except AttributeError:
-        try:
-            # Fallback syntax for alternative backends (Tkinter)
-            manager.resize(*manager.window.maxsize())
-        except Exception:
-            pass
+    # manager = plt.get_current_fig_manager()
+    # try:
+    #     # Works perfectly on Spyder's default backend (Qt) and Windows/Linux/Mac
+    #     manager.window.showMaximized()
+    # except AttributeError:
+    #     try:
+    #         # Fallback syntax for alternative backends (Tkinter)
+    #         manager.resize(*manager.window.maxsize())
+    #     except Exception:
+    #         pass
     ax = fig.add_subplot(111, projection='3d')
     
 

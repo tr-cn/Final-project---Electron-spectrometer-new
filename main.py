@@ -29,7 +29,7 @@ if __name__ == "__main__":
     shield_mm = 12.5
     ig,ax  = geometry(shield_mm = shield_mm, yoke=yoke)
     pinhole_dia_mm = 3
-    fringe = 0
+    fringe = 1
     Z_mm = integ.analitic_sol_vel2dist (e_eng_MeV[1], me_kg, e_C, height_mm, B_T[0])
     print(Z_mm)
     
