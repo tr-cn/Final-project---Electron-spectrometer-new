@@ -3,18 +3,13 @@ import numpy as np
 import time
 
 def apply_boundries (phi):
-    phi[0,:] = 1; phi[-1,:] = -1; phi[1:-1,0] = 0; phi[1:-1,-1] = 0;
-    
+    phi[0,:] = 0;  phi[-1,:] = 0;
+    phi[0,2**4: 2**6] = 1; phi[-1,2**4 :2**6] = -1; phi[1:-1,0] = 0; phi[1:-1,-1] = 0;
     return  phi
 
 
-def err_fun(phiprev,phinew):
-    eps_max = np.max(np.max(np.abs(phinew - phiprev)))\
-        
-    return eps_max
-
-
-def gauss_seidel (phi, Nx, Ny): 
+def gauss_seidel (phi): 
+    Nx, Ny = phi.shape
     for i in range(1,Nx-1):
         for j in range(1,Ny-1):
             phi[i,j] = 1/4 * (phi[i+1,j] + phi[i-1,j] + phi[i,j+1] + phi[i,j-1])
@@ -39,7 +34,7 @@ def restrict_residual (r):
         for J in range (1,Ny-1):
             i = 2*I
             j = 2*J
-            R[I,J] = 1/4 * (r [i,j] + r [i,j-1] + r [i-1,j] + r [i-1,-j])
+            R[I,J] = 1/4 * (r [i,j] + r [i,j-1] + r [i-1,j] + r [i-1,j-1])
     r[0,:] = 0; r[-1,:] = 0; r[:,0] = 0; r[:,-1] = 0;
     
     return R
@@ -105,39 +100,20 @@ def prolongate_correction(e_coarse):
                 )
 
     # Correction has zero Dirichlet boundary values
-    e_fine[0, :] = 0.0
-    e_fine[-1, :] = 0.0
-    e_fine[:, 0] = 0.0
-    e_fine[:, -1] = 0.0
+    e_fine[0, :] = 0.0; e_fine[-1, :] = 0.0; e_fine[:, 0] = 0.0; e_fine[:, -1] = 0.0
 
     return e_fine
     
 
-# def restrict_func(phi):
-#     Nx, Ny = np.array(phi.shape)
-#     ie_swips = 10
-#     fe_swips = 100
-#     r_finer = laplace_residuals(phi)
-#     r_coarser_new = np.copy(r_finer)
-#     while Nx>3 or Ny>3:
-#         r_finer = np.copy(r_coarser_new)
-#         r_coarser = restrict_residual(r_finer)
-#         e_coarser = gauss_seidel_residuals(r_coarser,ie_swips)
-#         r_coarser_new = r_coarser - e_coarser
-#         Nx, Ny = np.array(r_coarser_new.shape)
-    
-#     # here the grid size is 3
-#     e_coarsest = gauss_seidel_residuals(r_coarser,fe_swips);
-#     r_coarsest = r_coarser - e_coarsest
- 
-#     return r_coarsest, e_coarsest
+
 
 
 def restrict_func(phi):
-    Nx, Ny = np.array(phi.shape)
-    ie_swips = 10
-    fe_swips = 100
+    Nx, Ny = phi.shape
+    ie_swips = 4
+    fe_swips = 10
     r = []; e = []
+        
     r.append(laplace_residuals(phi))
     while Nx>3 or Ny>3:
         r_finer = r[-1]
@@ -150,39 +126,42 @@ def restrict_func(phi):
         Nx, Ny = np.array(r_coarser_new.shape)
     
     # here the grid size is 3
-    e_coarsest = gauss_seidel_residuals(r_coarser,fe_swips);
-    r_coarsest = r_coarser - e_coarsest
+    e_coarsest = gauss_seidel_residuals(r[-1],fe_swips);
+    r_coarsest = r_coarser - laplace_residuals(e_coarsest)
     
     r[-1]=(r_coarsest)
     e[-1]=(e_coarsest)
     return r, e
 
-
-
-
-
-def prolongate_func (e, phi):
-    max_Nx, max_Ny = np.array(phi.shape)
-    e_coarsest = e[-1]
-    Nx, Ny = np.array(e_coarsest.shape)
-    count = 0
-    while Nx<max_Nx/2 or Ny<max_Ny/2:
-        e_finer = prolongate_correction(e[-1-count])    
-        e[-1- (count+1)] = e[-1- (count+1)] + e_finer
-        count = count + 1
-        Nx,Ny = e[-1-count].shape
-        
-    e_finer = prolongate_correction(e[0])
-    phi = phi + e_finer
+def phi_smother(phi,gs_swips):
     
+    for i in range(gs_swips):
+        phi = gauss_seidel(phi)
+    phi = apply_boundries(phi)
     return phi
-        
     
 
+def prolongate_func(e, phi):
+    # Go from the coarsest correction upward
+    for level in range(len(e) - 2, -1, -1):
+        finer_correction = prolongate_correction(e[level + 1])
+
+        # Add the correction to the current level
+        e[level] = e[level] + finer_correction
+
+    # Transfer the finest correction to phi
+    phi = phi + prolongate_correction(e[0])
+
+    # Restore the physical boundary conditions
+    phi = apply_boundries(phi)
+   
+
+    return phi
 
 
 
-def  laplace_func (phi=[]):
+
+def  laplace_func (phi):
     Nx, Ny = np.array(phi.shape)
     eps = 1;
     treshhold = 1e-6
@@ -191,49 +170,69 @@ def  laplace_func (phi=[]):
     gs_swips = 5 # gauss-seidle swips befor start mutigrid
 
     
-    while eps> treshhold and count<=max_round:
+    while eps > treshhold and count<=max_round:
         phi_prev = np.copy(phi)
         count+=1
-        for i in range(gs_swips):
-            phi = gauss_seidel (phi, Nx, Ny)
         
-        
+        phi_smother(phi,gs_swips)
         r, e  = restrict_func(phi)
-        phi_prev = np.copy(phi)
         phi = prolongate_func (e, phi)
-            
-            
-        # residuals = laplace_residuals(phi)
-        # r_coarse = restrict_residual(residuals)
-        
-        # e_coarse = gauss_seidel_residuals(r_coarse,ie_swips)
-        # e_fine = prolongate_correction(e_coarse)
-        
-        
-        # phi = phi + e_fine
-        
-        
-        
-        # eps = err_fun(phi,phi_prev)
+        phi = phi_smother(phi,gs_swips)
+      
         if count % 5 == 0:
-            # eps = np.max(np.abs(r[0]))
-            eps = np.max(np.abs(phi - phi_prev))
+            eps = np.max(np.abs(laplace_residuals(phi)))
             print (eps)
     plt.imshow(phi,extent=[-1/2, 1/2, -1/2, 1/2]); plt.colorbar(); 
     plt.title (f'Dericle, Num of iterations:{count} ') 
     plt.show()
     print (count)
     # print(phinew)
+    
+    return phi
         
 
-def main(N = 2**7+1):
-    phi0 = np.random.rand(N,N) # [raws,colmns]
+
+
+
+
+
+
+
+def get_elctric_potential(Nx = 2**6+1, Ny = 2**6+1):
+    phi0 = np.random.rand(Nx,Ny) # [raws,colmns]
     phi0 = apply_boundries (phi0)
-    rho = 1 #normlized to epsilon_0
-    BC = 0 # dericle
-    laplace_func (phi=phi0)
+    phi = laplace_func (phi0)
+    return phi
+    
+
+def get_magnetic_potential(Nx = 2**6+1, Ny = 2**6+1):
+    mu0 = 4.0 * np.pi * 1e-7
+    B0_T = 0.5       # Tesla
+    D_m = 0.01       # m
+    delta_psi_A = B0_T * D_m / mu0
+    
+    psi0 = np.random.rand(Nx,Ny) # [raws,colmns]
+    psi0 = apply_boundries (psi0)
+    psi0 = psi0 * delta_psi_A
+    psi0 = laplace_func (psi0)
+    
+    
+    return
+
+
+# def main():
+#     Nx = 2**6+1; Ny = 2**6+1;
+#     phi = get_elctric_potential(Nx =Nx, Ny = Ny)
+       
+    
+#     return phi
+    
     # BC = 1 # Periodic
     # laplace_func (phi=phi0,BC=BC)
 
 if __name__ == "__main__":
-    main()
+    plt.close('all')
+    # phi = main()
+    Nx = 2**6+1; Ny = 2**6+1;
+    # phi = get_elctric_potential(Nx = Nx, Ny = Ny)
+    psi = get_magnetic_potential(Nx = Nx, Ny = Ny)
