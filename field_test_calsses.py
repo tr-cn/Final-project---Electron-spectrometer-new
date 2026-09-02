@@ -589,30 +589,30 @@ if __name__ == "__main__":
     
     phi.solve_potential()
     
-    ElectricField(phi)
-    ElectricField.solve_field()
-    ElectricField.show_field()
+    Ele = ElectricField(phi)
+    Ele.solve_field()
+    Ele.show_field()
         
 
 
 
     
     
-    psi = MagneticPotential(
-        Nx=65,
-        Ny=65,
-        B0_T=1.0,
-        # gap_mm=12.5,
-        Lx_mm=12.5,
-        Ly_mm=150.0,
-        pole_y_start_mm=-75.0,
-        pole_y_end_mm=75.0,
-    )
+    # psi = MagneticPotential(
+    #     Nx=65,
+    #     Ny=65,
+    #     B0_T=1.0,
+    #     # gap_mm=12.5,
+    #     Lx_mm=12.5,
+    #     Ly_mm=150.0,
+    #     pole_y_start_mm=-75.0,
+    #     pole_y_end_mm=75.0,
+    # )
     
-    psi.solve_potential()
+    # psi.solve_potential()
     
-    mag = MagneticField(psi)
-    mag.solve_field()
-    mag.show_field()
+    # mag = MagneticField(psi)
+    # mag.solve_field()
+    # mag.show_field()
     
 
