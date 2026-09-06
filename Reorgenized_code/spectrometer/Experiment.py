@@ -48,16 +48,16 @@ class Experiment():
         
         v0_m0s = MeV2m0s(self.q_eng_MeV, self.m_kg)
         T_cyclotron = self._get_T_cyclotorn()
-        self.dt =T_cyclotron/self.N_steps
+        self.dt_s =T_cyclotron/self.N_steps
 
-        return self.dt
+        return self.dt_s
          
     
     def _get_dr(self):
         #  I call it that way, althogh it is not propagation of a wave
         self.CFL = CFL
-        self.dr = self.dt*self.CFL;
-        return self.dr 
+        self.dr_mm = self.dt_s*self.CFL;
+        return self.dr_mm 
     
     def _get_experiment_range(self):
         self.x_start_mm = -self.width_mm/2
@@ -92,9 +92,9 @@ class Experiment():
         Dx_mm, Dy_mm, Dz_mm = self._get_diffs()
         
         norm = np.sqrt(Dx_mm**2 + Dy_mm**2 + Dz_mm**2)
-        self.dx_mm  = self.dr * Dx_mm/norm
-        self.dy_mm  = self.dr * Dy_mm/norm
-        self.dz_mm  = self.dr * Dz_mm/norm
+        self.dx_mm  = self.dr_mm * Dx_mm/norm
+        self.dy_mm  = self.dr_mm * Dy_mm/norm
+        self.dz_mm  = self.dr_mm * Dz_mm/norm
         
         
         
@@ -104,7 +104,7 @@ class Experiment():
     def _get_needed_grid_size(self):
         Dx_mm, Dy_mm, Dz_mm = self._get_diffs()
         norm = np.sqrt(Dx_mm**2 + Dy_mm**2 + Dz_mm**2)
-        N = self.N_steps/self.CFL
+        N = self.N_steps*self.CFL
         self.Nx = int(np.round(N*Dx_mm/norm)); 
         self.Ny = int(np.round(N*Dy_mm/norm));
         self.Nz = int(np.round(N*Dz_mm/norm));
