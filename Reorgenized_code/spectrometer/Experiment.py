@@ -113,9 +113,9 @@ class Experiment():
         Dx_mm, Dy_mm, Dz_mm = self._get_diffs()
         norm = np.sqrt(Dx_mm**2 + Dy_mm**2 + Dz_mm**2)
         N = self.N_steps*self.CFL
-        self.Nx = int(np.round(N*Dx_mm/norm)); 
-        self.Ny = int(np.round(N*Dy_mm/norm));
-        self.Nz = int(np.round(N*Dz_mm/norm));
+        self.Nx = int(np.round(N*Dx_mm/norm)[0]); 
+        self.Ny = int(np.round(N*Dy_mm/norm)[0]);
+        self.Nz = int(np.round(N*Dz_mm/norm)[0]);
         return self.Nx, self.Ny, self.Nz
                           
                            

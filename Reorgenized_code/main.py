@@ -10,7 +10,8 @@ plt.close('all')
 
 from spectrometer.geometry import Spectrometer_Budy
 from spectrometer.Experiment import Experiment
-import spectrometer.integrators as integ
+from spectrometer.integrators import Integrators
+# import spectrometer.integrators as integ
 import spectrometer.plot_result as pr
 import spectrometer.fields as fields
 
@@ -40,6 +41,9 @@ if __name__ == "__main__":
     fringe = 1
     R0_mm = [0,-5,0]
     
+
+    spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
+    fig,ax = spec._draw_spec()
     
     experiment = Experiment(
                             height_mm = height_mm, width_mm = width_mm, depth_mm = depth_mm, shield_mm = shield_mm, pinhole_dia_mm = pinhole_dia_mm, yoke = yoke, # Spectrometere and simulation border
@@ -49,12 +53,11 @@ if __name__ == "__main__":
                             )
        
     experiment._evaluate_exp_paramas()
+
     
-    
-    
-    spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
-    fig,ax = spec._draw_spec()
-    
+    integrator = Integrators(experiment)
+    Z_mm = integrator._analitic_sol_vel2dist()
+    print(Z_mm)
     
     
     

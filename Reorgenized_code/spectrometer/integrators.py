@@ -13,25 +13,6 @@ from spectrometer.physics import get_lorentz_acceleration, get_electric_accelera
 from spectrometer.fields import Magenetic_field_Analitic
 
 
-
-
-def analitic_sol_vel2dist (q_eng_MeV, m_kg, q_C, height_mm, B_T):
-    # An explanation of how radius and the velocities are calculated is given
-    # in the documation
-    q_C = abs(q_C)
-    h_mm = height_mm/2
-    q_eng_J = q_eng_MeV*1e6 * 1.602*1e-19
-    c_m0s = 299792458
-    v_m0s = c_m0s*np.sqrt ( 1 - ( m_kg*c_m0s**2 / (q_eng_J + m_kg*c_m0s**2) )**2 )# [m/s]
-    gamma = 1 / np.sqrt ( 1 - (v_m0s/c_m0s)**2 )
-    R_m = gamma * m_kg*v_m0s / (abs(q_C) * B_T)
-    R_mm = R_m *1e3
-    
-    Z_mm = np.sqrt ( 2*R_mm*h_mm - h_mm**2 )
-    return Z_mm
-
-
-
 def MeV2m0s(q_eng_MeV, m_kg):
     q_eng_J = abs(q_eng_MeV)*1e6 * 1.602*1e-19
     c_m0s = 299792458
@@ -42,6 +23,7 @@ def vel2gamma (v_m0s):
     c_m0s = 299792458
     v0_mag_m0s = np.linalg.norm(v_m0s)
     return 1 / np.sqrt ( 1 - (v0_mag_m0s/c_m0s)**2 )
+
 
 
 
@@ -61,15 +43,55 @@ def get_electric_field (E_type, dx_mm, dy_mm, dz_mm): # Need to think how to do 
     return
 
 
-def is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
-    if  R_current_m[1]<=0:
-        pinhole_rad_m = pinhole_dia_mm*1e-3/2
-        return abs(R_current_m[2]) < pinhole_rad_m  and abs(R_current_m[0]) < pinhole_rad_m
+
+
+
+
+class Integrators():
+    def __init__(self,experiment):
+        self.experiment = experiment
+        self.q_eng_MeV = self.experiment.q_eng_MeV
+        self.m_kg = self.experiment.m_kg
+        self.q_C = self.experiment.q_C
+        self.height_mm = self.experiment.height_mm
+        self.Bx0_T = self.experiment.Bx0_T
+        self.q_eng_J = self.experiment.q_eng_MeV*1e6 * 1.602*1e-19
+        self.h_m = self.experiment.height_mm*1e-3 /2
+        self.w_m = self.experiment.width_mm*1e-3  /2
+        self.d_m = self.experiment.depth_mm*1e-3  /2
+        
+
+
+
+    def _analitic_sol_vel2dist (self):
+        
+        # An explanation of how radius and the velocities are calculated is given
+        # in the documation
+        q_C = abs(self.q_C)
+        
+        
+        c_m0s = 299792458
+        v_m0s = c_m0s*np.sqrt ( 1 - ( self.m_kg*c_m0s**2 / (self.q_eng_J + self.m_kg*c_m0s**2) )**2 )# [m/s]
+        gamma = 1 / np.sqrt ( 1 - (v_m0s/c_m0s)**2 )
+        B0_T =np.array([self.Bx0_T,0,0])
+        R_m = gamma * self.m_kg*v_m0s / (abs(q_C) * self.Bx0_T)
+        # R_mm = R_m *1e3
+        
+        Z_mm = np.sqrt ( 2*R_m*self.h_m - self.h_m**2 )*1e3
+        return Z_mm
+
+
     
-    return abs(R_current_m[2]) < h_m and R_current_m[1] < d_m and abs(R_current_m[0]) < abs (w_m)
+    def is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+        if  R_current_m[1]<=0:
+            pinhole_rad_m = pinhole_dia_mm*1e-3/2
+            return abs(R_current_m[2]) < pinhole_rad_m  and abs(R_current_m[0]) < pinhole_rad_m
+        
+        return abs(R_current_m[2]) < h_m and R_current_m[1] < d_m and abs(R_current_m[0]) < abs (w_m)
     
 
 def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm,pinhole_dia_mm, fringe):
+    
     h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
     
     v0_m0s = MeV2m0s(q_eng_MeV, m_kg); v_current_m0s=v0_m0s;
