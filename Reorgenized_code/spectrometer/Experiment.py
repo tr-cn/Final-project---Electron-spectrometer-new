@@ -16,9 +16,9 @@ def vel2gamma (v_m0s):
 
 
 class Experiment():
-    def __init__(self, height_mm, width_mm, depth_mm, shield_mm, yoke,
-                 q_eng_MeV, m_kg, q_C,
-                 Bx0_T, Ey0_Vm,
+    def __init__(self, height_mm, width_mm, depth_mm, shield_mm, yoke, pinhole_dia_mm,
+                 R0_mm, q_eng_MeV, m_kg, q_C,
+                 Bx0_T, Ey0_Vm, fringe,
                  N_steps = 150, CFL=0.1):
         
         self.width_mm = width_mm
@@ -26,12 +26,16 @@ class Experiment():
         self.depth_mm = depth_mm
         self.shield_mm = shield_mm
         self.yoke = yoke
+        self.pinhole_dia_mm = pinhole_dia_mm
         
+        self.R0_mm = R0_mm
         self.q_eng_MeV = q_eng_MeV
         self.m_kg = m_kg
         self.q_C = q_C
+        
         self.Bx0_T = Bx0_T
         self.Ey0_Vm = Ey0_Vm
+        self.fringe = fringe
         
         self.CFL = CFL
         self.N_steps = N_steps
@@ -55,7 +59,6 @@ class Experiment():
     
     def _get_dr(self):
         #  I call it that way, althogh it is not propagation of a wave
-        self.CFL = CFL
         self.dr_mm = self.dt_s*self.CFL;
         return self.dr_mm 
     
@@ -66,12 +69,17 @@ class Experiment():
         self.z_start_mm = -self.height_mm/2
         self.z_end_mm   =  self.height_mm/2
         
-        self.y_start_mm = -abs(self.shield_mm)
+        
+        if abs(self.R0_mm[1])> abs(self.shield_mm):
+            self.y_start_mm = -abs(self.R0_mm[1])
+        else:
+            self.y_start_mm = -abs(self.shield_mm)
+        
         if self.yoke == 1:
             self.y_end_mm = self.depth_mm
                  
         elif self.yoke == 0:
-            self.y_end_mm + abs(self.shield_mm)
+            self.y_end_mm = self.depth_mm + abs(self.shield_mm)
     
         self.exp_range_X_mm = np.array([self.x_start_mm, self.x_end_mm])
         self.exp_range_Y_mm = np.array([self.y_start_mm, self.y_end_mm])
@@ -159,6 +167,6 @@ if __name__ == "__main__":
     CFL = 0.1
     N_steps = 150
     experiment = Experiment(height_mm = height_mm, width_mm = width_mm, depth_mm = depth_mm,  q_eng_MeV = e_eng_MeV, m_kg = me_kg, 
-                            q_C = e_C ,Bx0_T = Bx0_T, Ey0_Vm = Ey0_Vm, yoke = yoke, shield_mm = shield_mm ,CFL =CFL, N_steps = N_steps)
+                            q_C = e_C ,Bx0_T = Bx0_T, Ey0_Vm = Ey0_Vm, fringe = fringe, yoke = yoke, shield_mm = shield_mm ,CFL =CFL, N_steps = N_steps)
        
     experiment._evaluate_exp_paramas()
