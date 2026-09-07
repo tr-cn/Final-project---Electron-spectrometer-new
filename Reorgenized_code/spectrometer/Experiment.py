@@ -125,7 +125,9 @@ class Experiment():
         self.Lz_mm = np.linspace(self.z_start_mm, self.z_end_mm,self.Nz)
         return  self.Lx_mm,  self.Ly_mm,  self.Lz_mm
     
-    
+    # def _get_all_params(self):
+    #     """Return all instance attributes as a single dict."""
+    #     return dict(self.__dict__)
     
     def _evaluate_exp_paramas(self):
         self._get_T_cyclotorn()
@@ -136,8 +138,8 @@ class Experiment():
         self._get_dxdydz()
         self._get_needed_grid_size()
         self._get_range_vecs()
-        
-        
+        # self._get_all_params()
+        return dict(self.__dict__)
         
         
     # def _experiment_bondriess(self,R0_mm, grid, fringe = 1):
@@ -166,7 +168,14 @@ if __name__ == "__main__":
     fringe = 1
     CFL = 0.1
     N_steps = 150
-    experiment = Experiment(height_mm = height_mm, width_mm = width_mm, depth_mm = depth_mm,  q_eng_MeV = e_eng_MeV, m_kg = me_kg, 
-                            q_C = e_C ,Bx0_T = Bx0_T, Ey0_Vm = Ey0_Vm, fringe = fringe, yoke = yoke, shield_mm = shield_mm ,CFL =CFL, N_steps = N_steps)
+    experiment = Experiment(height_mm=height_mm, width_mm=width_mm, 
+                            depth_mm=depth_mm, shield_mm=shield_mm,
+                            yoke=yoke, pinhole_dia_mm=pinhole_dia_mm,
+                            
+                             R0_mm = R0_mm, q_eng_MeV = e_eng_MeV, m_kg=me_kg, q_C=e_C,
+                             Bx0_T=Bx0_T, Ey0_Vm=Ey0_Vm, fringe=fringe,
+                             N_steps = N_steps, CFL=CFL)
        
-    experiment._evaluate_exp_paramas()
+    params = experiment._evaluate_exp_paramas()
+    
+    

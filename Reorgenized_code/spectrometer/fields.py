@@ -1,6 +1,9 @@
 import numpy as np
 
 
+def 
+
+
 class Magenetic_field_Analitic:
     def __init__(self, B0_T, width_mm=12.5, depth_mm=50.8, k=0, fringe = 1, sharp_edge=1, yoke=1):
         self.B0_T = B0_T

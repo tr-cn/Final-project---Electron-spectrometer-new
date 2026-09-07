@@ -15,7 +15,7 @@ from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
 
 
-def analitic_sol_vel2dist (q_eng_MeV, m_kg, q_C, height_mm, B_T):
+def analitic_sol_vel2dist (q_eng_MeV, m_kg, q_C, height_mm, Bx0_T):
     # An explanation of how radius and the velocities are calculated is given
     # in the documation
     q_C = abs(q_C)
@@ -24,7 +24,7 @@ def analitic_sol_vel2dist (q_eng_MeV, m_kg, q_C, height_mm, B_T):
     c_m0s = 299792458
     v_m0s = c_m0s*np.sqrt ( 1 - ( m_kg*c_m0s**2 / (q_eng_J + m_kg*c_m0s**2) )**2 )# [m/s]
     gamma = 1 / np.sqrt ( 1 - (v_m0s/c_m0s)**2 )
-    R_m = gamma * m_kg*v_m0s / (abs(q_C) * B_T)
+    R_m = gamma * m_kg*v_m0s / (abs(q_C) * Bx0_T)
     R_mm = R_m *1e3
     
     Z_mm = np.sqrt ( 2*R_mm*h_mm - h_mm**2 )
