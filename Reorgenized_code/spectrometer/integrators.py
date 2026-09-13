@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from types import SimpleNamespace
 
 #plt.rcParams.update({
 #   'font.family': 'serif',
@@ -11,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 from spectrometer.physics import get_lorentz_acceleration, get_electric_acceleration, get_magnetic_rotation
 from spectrometer.fields import Magenetic_field_Analitic
-
+from spectrometer.numeric_fields import *
 
 def MeV2m0s(q_eng_MeV, m_kg):
     q_eng_J = abs(q_eng_MeV)*1e6 * 1.602*1e-19
@@ -27,20 +28,20 @@ def vel2gamma (v_m0s):
 
 
 
-def get_magnetic_field (B_type,B_T,R_current): # Need to think how to do it correctly
-    # B_type can get: Constant, analitic, numeric
-    if B_type == "const": # here B_T is value
-        return B_T
-    if B_type == "analitic": # here B_T is the class: Magenetic_field_Analitic
-        Bx, By, Bz = B_T._get_magnetic_field(R_current)
-        return Bx, By, Bz
-    if B_type == "numeric": # Here B_T is a grid of valuse that need to be interpulated for the exact positon
-        return None
+# def get_magnetic_field (B_type,B_T,R_current): # Need to think how to do it correctly
+#     # B_type can get: Constant, analitic, numeric
+#     if B_type == "const": # here B_T is value
+#         return B_T
+#     if B_type == "analitic": # here B_T is the class: Magenetic_field_Analitic
+#         Bx, By, Bz = B_T._get_magnetic_field(R_current)
+#         return Bx, By, Bz
+#     if B_type == "numeric": # Here B_T is a grid of valuse that need to be interpulated for the exact positon
+#         return None
 
 
-def get_electric_field (E_type, dx_mm, dy_mm, dz_mm): # Need to think how to do it correctly
+# def get_electric_field (E_type, dx_mm, dy_mm, dz_mm): # Need to think how to do it correctly
    
-    return
+#     return
 
 
 
@@ -48,91 +49,107 @@ def get_electric_field (E_type, dx_mm, dy_mm, dz_mm): # Need to think how to do 
 
 
 class Integrators():
-    def __init__(self,experiment):
-        self.experiment = experiment
-        self.q_eng_MeV = self.experiment.q_eng_MeV
-        self.m_kg = self.experiment.m_kg
-        self.q_C = self.experiment.q_C
-        self.height_mm = self.experiment.height_mm
-        self.Bx0_T = self.experiment.Bx0_T
-        self.q_eng_J = self.experiment.q_eng_MeV*1e6 * 1.602*1e-19
-        self.h_m = self.experiment.height_mm*1e-3 /2
-        self.w_m = self.experiment.width_mm*1e-3  /2
-        self.d_m = self.experiment.depth_mm*1e-3  /2
-        
-
+    def __init__(self,params):
+        # self.experiment = experiment
+        # self.q_eng_MeV = self.experiment.q_eng_MeV
+        # self.m_kg = self.experiment.m_kg
+        # self.q_C = self.experiment.q_C
+        # self.height_mm = self.experiment.height_mm
+        # self.Bx0_T = self.experiment.Bx0_T
+        # self.q_eng_J = self.experiment.q_eng_MeV*1e6 * 1.602*1e-19
+        # self.h_m = self.experiment.height_mm*1e-3 /2
+        # self.w_m = self.experiment.width_mm*1e-3  /2
+        # self.d_m = self.experiment.depth_mm*1e-3  /2
+        self.__dict__.update(params)
+        self.k = 0
+        if self.solution == "Analitic field":
+            self.mag = Magenetic_field_Analitic(Bx0_T=self.Bx0_T, width_mm=self.width_mm, depth_mm=self.depth_mm,
+                                           k=self.k, fringe = self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)
+            
+        elif self.solution == "Numeric Field":
+            psi = MagneticPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, B0_T=self.Bx0_T,
+                                    pole_y_start_mm=0, pole_y_end_mm=self.depth_mm)
+            
+            psi.solve_potential()
+            self.mag = MagneticField(psi)
+            self.mag.solve_field()
 
 
     def _analitic_sol_vel2dist (self):
         
         # An explanation of how radius and the velocities are calculated is given
         # in the documation
-        q_C = abs(self.q_C)
-        
-        
-        c_m0s = 299792458
-        v_m0s = c_m0s*np.sqrt ( 1 - ( self.m_kg*c_m0s**2 / (self.q_eng_J + self.m_kg*c_m0s**2) )**2 )# [m/s]
-        gamma = 1 / np.sqrt ( 1 - (v_m0s/c_m0s)**2 )
-        B0_T =np.array([self.Bx0_T,0,0])
-        R_m = gamma * self.m_kg*v_m0s / (abs(q_C) * self.Bx0_T)
+
+        R_m = self.gamma0 * self.m_kg*self.v0_m0s / (self.q_C * self.Bx0_T)
         # R_mm = R_m *1e3
+        signs = np.sign(R_m) 
         
-        Z_mm = np.sqrt ( 2*R_m*self.h_m - self.h_m**2 )*1e3
-        return Z_mm
+        R_m = abs(R_m)
+        Y_mm = np.sqrt ( 2*R_m[1]*self.h_m - self.h_m**2 )*1e3 * signs[1]
+        
+        return Y_mm
 
 
     
-    def is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+    def _is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
         if  R_current_m[1]<=0:
             pinhole_rad_m = pinhole_dia_mm*1e-3/2
             return abs(R_current_m[2]) < pinhole_rad_m  and abs(R_current_m[0]) < pinhole_rad_m
         
         return abs(R_current_m[2]) < h_m and R_current_m[1] < d_m and abs(R_current_m[0]) < abs (w_m)
     
+    
+    def _get_magnetic_field(self,R):
+        if self.solution == "Analitic field":
+            if self.fring == 0:
+                return self.Bx0_T
+                
+            if self.firnge ==1:
+                mag = Magenetic_field_Analitic(self.Bx0_T, self.width_mm, self.depth_mm, self.k, self.fringe, self.sharp_edge, self.yoke)
+                return  mag._get_magnetic_field(R)
+            
+        # elif 
+    
 
-def euler (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm,pinhole_dia_mm, fringe):
-    
-    h_m = height_mm/2*1e-3; d_m = depth_mm*1e-3; w_m = width_mm/2*1e-3;
-    
-    v0_m0s = MeV2m0s(q_eng_MeV, m_kg); v_current_m0s=v0_m0s;
-    R0_m = R0_mm *1e-3; R_current_m= R0_m;
-    
-    gamma = vel2gamma(v0_m0s); gamma_current = gamma
-    
-    v_vec_m0s = list([]); gamma_vec = list([]); R_vec_m = list([]); 
-    v_vec_m0s.append(v0_m0s); gamma_vec.append(gamma); R_vec_m.append(R0_m);
-    
-    #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
-    T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
-    dt_s = T_cyclotron/steps
-    B_in_T = B_T;
-    B_zero_T = np.array([0,0,0])
-    
-    while is_in_spectrometer(R_current_m,h_m,d_m,w_m,shield_mm,pinhole_dia_mm):
+    def _euler (self):
+ 
+        gamma_current = self.gamma0
+        v_current_m0s=self.v0_m0s;
         
-        B_T = B_in_T
-        if fringe==0 and R_current_m[1]<0:
-            B_T = B_zero_T  
+        v_vec_m0s = list([]); gamma_vec = list([]); R_vec_m = list([]); 
+        v_vec_m0s.append(self.v0_m0s); gamma_vec.append(gamma_current); R_vec_m.append(self.R0_m);
         
-        gamma = gamma_current
-        v_m0s = v_current_m0s
-        R_m = R_current_m        
-        dv_dt_m0s2= get_lorentz_acceleration(q_C,gamma,m_kg,E_V0m,v_m0s,B_T)
+        #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
+        # T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
+        # dt_s = T_cyclotron/steps
         
-        v_current_m0s = v_m0s + dv_dt_m0s2*dt_s
+        B_zero_T = np.array([0,0,0])
+        R_current_m = self.R0_m
+        while self._is_in_spectrometer(R_current_m = R_current_m, h_m = self.h_m, d_m = self.d_m, w_m = self.w_m, shield_mm = self.shield_mm, pinhole_dia_mm= self.pinhole_dia_mm):
+            
+            B_T = self._get_magnetic_field(self.R_current_m);
+            if fringe==0 and R_current_m[1]<0:
+                B_T = B_zero_T  
+            
+            gamma = gamma_current
+            v_m0s = v_current_m0s
+            R_m = R_current_m        
+            dv_dt_m0s2= get_lorentz_acceleration(q_C,gamma,m_kg,E_V0m,v_m0s,B_T)
+            
+            v_current_m0s = v_m0s + dv_dt_m0s2*dt_s
+            
+            dr_m = v_current_m0s*dt_s;
+            R_current_m = R_m + dr_m 
+            gamma_current = vel2gamma(v_current_m0s)
+            
+            
+            v_vec_m0s.append(v_current_m0s)
+            R_vec_m.append(R_current_m)
+            gamma_vec.append(gamma_current)
         
-        dr_m = v_current_m0s*dt_s;
-        R_current_m = R_m + dr_m 
-        gamma_current = vel2gamma(v_current_m0s)
         
-        
-        v_vec_m0s.append(v_current_m0s)
-        R_vec_m.append(R_current_m)
-        gamma_vec.append(gamma_current)
-    
-    
-    R_vec_mm = [R_m*1e3 for R_m in R_vec_m]
-    return R_vec_mm,v_vec_m0s,gamma_vec
+        R_vec_mm = [R_m*1e3 for R_m in R_vec_m]
+        return R_vec_mm,v_vec_m0s,gamma_vec
         
 
 def RK2 (q_eng_MeV, m_kg, q_C, height_mm, width_mm, depth_mm, B_T, E_V0m, R0_mm, steps, shield_mm, pinhole_dia_mm, fringe):

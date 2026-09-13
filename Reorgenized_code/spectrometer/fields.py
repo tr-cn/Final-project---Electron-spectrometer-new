@@ -1,12 +1,12 @@
 import numpy as np
 
 
-def 
+# def 
 
 
 class Magenetic_field_Analitic:
-    def __init__(self, B0_T, width_mm=12.5, depth_mm=50.8, k=0, fringe = 1, sharp_edge=1, yoke=1):
-        self.B0_T = B0_T
+    def __init__(self, Bx0_T, width_mm=12.5, depth_mm=50.8, k=0, fringe = 1, sharp_edge=1, yoke=1):
+        self.Bx0_T = Bx0_T
         self.k = k # Gradient along Z direction
         self.fringe = fringe
         self.yoke = yoke
@@ -33,7 +33,7 @@ class Magenetic_field_Analitic:
     
     def _get_magnetic_field(self,R):
         if self.fringe == 0:
-            return np.array([self.B0_T,0,0])
+            return np.array([self.Bx0_T,0,0])
         
         
         x = R[0]; y = R[1]; z = R[2];
@@ -49,9 +49,9 @@ class Magenetic_field_Analitic:
             F_out = self._enge_func(y_complex_norm_out)
             F = F_in*F_out
         
-        Bx = self.B0_T * np.real(F) * (1 - self.k * z)
-        By = self.B0_T * np.imag(F)
-        Bz = self.B0_T * self.k * x
+        Bx = self.Bx0_T * np.real(F) * (1 - self.k * z)
+        By = self.Bx0_T * np.imag(F)
+        Bz = self.Bx0_T * self.k * x
         
         return np.array([Bx,By,Bz])
         
@@ -126,7 +126,7 @@ class Magenetic_field_Analitic:
     
     # def _get_magnetic_field(self,R):
     #     if self.fringe == 0:
-    #         return np.array([self.B0_T,0,0])
+    #         return np.array([self.Bx0_T,0,0])
         
         
     #     x = R[0]; y = R[1]; z = R[2];
@@ -142,9 +142,9 @@ class Magenetic_field_Analitic:
     #         F_out = self._enge_func(y_complex_norm_out)
     #         F = F_in*F_out
         
-    #     Bx = self.B0_T * np.real(F) * (1 - self.k * z)
-    #     By = self.B0_T * np.imag(F)
-    #     Bz = self.B0_T * self.k * x
+    #     Bx = self.Bx0_T * np.real(F) * (1 - self.k * z)
+    #     By = self.Bx0_T * np.imag(F)
+    #     Bz = self.Bx0_T * self.k * x
         
     #     return np.array([Bx,By,Bz])
 
