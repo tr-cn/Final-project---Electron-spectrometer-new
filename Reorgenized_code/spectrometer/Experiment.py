@@ -28,9 +28,11 @@ class Experiment():
         self.shield_mm = shield_mm; self.s_m = self.shield_mm*1e-3
         self.yoke = yoke
         self.pinhole_dia_mm = pinhole_dia_mm
+        self.pinhole_rad_m = self.pinhole_dia_mm*1e-3 /2
         
         self.R0_mm = R0_mm
-        self.R0_m = [R0_mm[0]*1e-3,R0_mm[1]*1e-3,R0_mm[2]*1e-3]
+        # self.R0_m = [R0_mm[0]*1e-3,R0_mm[1]*1e-3,R0_mm[2]*1e-3]
+        self.R0_m = np.array(R0_mm)*1e-3
         self.q_eng_MeV = q_eng_MeV
         self.q_eng_J = abs(q_eng_MeV)*1e6 * 1.602*1e-19
         self.m_kg = m_kg

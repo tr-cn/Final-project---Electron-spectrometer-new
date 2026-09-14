@@ -24,7 +24,7 @@ if __name__ == "__main__":
    
     
     me_kg = 9.109*1e-31
-    Bx0_T = -0.5
+    Bx0_T = 0.5
     Ey0_Vm = 0
     E_V0m = np.array([0,0,0])
     R0_mm  = np.array([0,-12.5,0])
@@ -35,12 +35,10 @@ if __name__ == "__main__":
     yoke = 0
     shield_mm = 0
     pinhole_dia_mm = 3
-    fringe = 1
+    fringe = 0
     CFL = 0.1
-    N_steps = 150
+    N_steps = 1.5*1e3
     pinhole_dia_mm = 3
-    fringe = 1
-    R0_mm = [0,-5,0]
     solution =  "Analitic field" # "Numeric Field"
     sharp_edge = 1
     
@@ -71,11 +69,22 @@ if __name__ == "__main__":
     
     
     R_vec_mm,v_vec_m0s,gamma_vec = integrator._euler ()
-    # pr.trajectory_plot(ax, R_vec_mm)
-    # print(R_vec_mm[-1])
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
     
 
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator._RK2 ()
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
     
+    
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator._RK4 ()
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
+    
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator._Boris_pusher ()
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
     
     
     
