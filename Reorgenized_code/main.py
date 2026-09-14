@@ -37,7 +37,7 @@ if __name__ == "__main__":
     pinhole_dia_mm = 3
     fringe = 0
     CFL = 0.1
-    N_steps = 1.5*1e3
+    N_steps = 700
     pinhole_dia_mm = 3
     solution =  "Analitic field" # "Numeric Field"
     sharp_edge = 1

@@ -24,7 +24,7 @@ class Potential:
         self.fe_sweeps = fe_sweeps
    
         
-    def apply_boundaries (self,potential):
+    def _apply_boundaries (self,potential):
         # This function is overide when MagneticPotential and ElectricPotential are set
         start = self.start_bun; end = self.end_bun
         P0 = self.P0
@@ -35,7 +35,7 @@ class Potential:
         return  potential
     
     
-    def gauss_seidel (self, potential): 
+    def _gauss_seidel (self, potential): 
         Ny = self.Ny; Nx = self.Nx
         
         for i in range(1, Ny - 1):
@@ -48,23 +48,23 @@ class Potential:
         return potential
     
     
-    def potential_init(self):
+    def _potential_init(self):
         potential0 = np.random.rand(self.Ny, self.Nx) # [raws,colmns]
-        potential0 = self.apply_boundaries (potential0)
+        potential0 = self._apply_boundaries (potential0)
         
         return potential0
     
     
-    def potential_smoother(self, potential):
+    def _potential_smoother(self, potential):
         
         for i in range(self.gs_sweeps):
-            potential = self.gauss_seidel(potential)
-        potential = self.apply_boundaries(potential)
+            potential = self._gauss_seidel(potential)
+        potential = self._apply_boundaries(potential)
         
         return potential
     
     
-    def laplace_residuals (self, potential,dy,dx):
+    def _laplace_residuals (self, potential,dy,dx):
         
         r = np.zeros_like(potential)
         r[1:-1, 1:-1] =  ((potential[2:, 1:-1] - 2*potential[1:-1, 1:-1] + potential[:-2, 1:-1]) / dy**2
@@ -74,7 +74,7 @@ class Potential:
         return r
     
     
-    def restrict_residual (self, r):
+    def _restrict_residual (self, r):
         # r represents the residuals of finer grid
         Ny_h, Nx_h = (np.array(r.shape)+ 1)  / 2
         Ny_h = int(Ny_h); Nx_h = int(Nx_h);
@@ -89,7 +89,7 @@ class Potential:
         return R
     
     
-    def gauss_seidel_residuals(self, R, sweeps,dy,dx):
+    def __gauss_seidel_residuals(self, R, sweeps,dy,dx):
         # r : residuals
         # N : number of iterations
         
@@ -108,7 +108,7 @@ class Potential:
         return e
     
     
-    def restrict_potential(self, potential):
+    def _restrict_potential(self, potential):
         Ny = self.Ny; Nx = self.Nx
         
         ie_sweeps = self.ie_sweeps
@@ -116,13 +116,13 @@ class Potential:
         r = []; e = []
         dy_fine =  self.dy; dx_fine = self.dx;
         
-        r_coarser_new = self.laplace_residuals(potential,dy_fine,dx_fine)
+        r_coarser_new = self._laplace_residuals(potential,dy_fine,dx_fine)
         while Ny>3 or Nx>3:
             r_finer = r_coarser_new
-            r_coarser = self.restrict_residual(r_finer) 
+            r_coarser = self._restrict_residual(r_finer) 
             dy_coars = 2*dy_fine; dx_coars = 2*dx_fine;
-            e_coarser = self.gauss_seidel_residuals(r_coarser, ie_sweeps,dy_coars,dx_coars)
-            r_coarser_new = r_coarser - self.laplace_residuals(e_coarser,dy_coars,dx_coars)
+            e_coarser = self.__gauss_seidel_residuals(r_coarser, ie_sweeps,dy_coars,dx_coars)
+            r_coarser_new = r_coarser - self._laplace_residuals(e_coarser,dy_coars,dx_coars)
             dy_fine = dy_coars
             dx_fine = dx_coars
             
@@ -132,8 +132,8 @@ class Potential:
             
         
         # here the grid size is 3
-        e_coarsest = self.gauss_seidel_residuals(r[-1],fe_sweeps,dy_coars,dx_coars);
-        r_coarsest = r[-1] - self.laplace_residuals(e_coarsest,dy_coars,dx_coars)
+        e_coarsest = self.__gauss_seidel_residuals(r[-1],fe_sweeps,dy_coars,dx_coars);
+        r_coarsest = r[-1] - self._laplace_residuals(e_coarsest,dy_coars,dx_coars)
         
         r[-1]=(r_coarsest)
         e[-1]=(e_coarsest)
@@ -141,7 +141,7 @@ class Potential:
         return r, e
     
     
-    def prolongate_correction(self,e_coarse):
+    def _prolongate_correction(self,e_coarse):
         Ny_coarse,Nx_coarse = e_coarse.shape
         Ny_fine = Ny_coarse * 2 -1
         Nx_fine = Nx_coarse * 2 -1
@@ -189,24 +189,24 @@ class Potential:
         return e_fine
 
 
-    def prolongate_potential(self,e, potential):
+    def _prolongate_potential(self,e, potential):
         # Go from the coarsest correction upward
         for level in range(len(e) - 2, -1, -1):
-            finer_correction = self.prolongate_correction(e[level + 1])
+            finer_correction = self._prolongate_correction(e[level + 1])
 
             # Add the correction to the current level
             e[level] = e[level] + finer_correction
  
         # Transfer the finest correction to potential
-        potential = potential - self.prolongate_correction(e[0])
+        potential = potential - self._prolongate_correction(e[0])
 
         # Restore the physical boundary conditions
-        potential = self.apply_boundaries(potential)
+        potential = self._apply_boundaries(potential)
        
         return potential
       
     
-    def  laplace_func (self, potential_0):
+    def  _laplace_func (self, potential_0):
 
         eps = 1;
         threshold = self.threshold
@@ -217,13 +217,13 @@ class Potential:
         while eps > threshold and count<=max_round:
             count+=1
             
-            potential = self.potential_smoother(potential)
-            r, e  = self.restrict_potential(potential)
-            potential = self.prolongate_potential (e, potential)
-            potential = self.potential_smoother(potential)
+            potential = self._potential_smoother(potential)
+            r, e  = self._restrict_potential(potential)
+            potential = self._prolongate_potential (e, potential)
+            potential = self._potential_smoother(potential)
 
             if count % 5 == 0:
-                eps = np.max(np.abs(self.laplace_residuals(potential,self.dy,self.dx)))
+                eps = np.max(np.abs(self._laplace_residuals(potential,self.dy,self.dx)))
                 
         print (f"residual value: {eps}")
         print (f" number of iterations: {count}")
@@ -232,9 +232,9 @@ class Potential:
         return potential
     
     
-    def solve_potential (self):
-        potential_0 = self.potential_init()
-        self.potential   = self.laplace_func(potential_0)
+    def _solve_potential (self):
+        potential_0 = self._potential_init()
+        self.potential   = self._laplace_func(potential_0)
         return self.potential  
             
 
@@ -255,7 +255,7 @@ class MagneticPotential(Potential):
         self.delta_psi = self.B0_T * self.gap_m / self.mu0
 
 
-    def apply_boundaries(self, potential):
+    def _apply_boundaries(self, potential):
         # The second index corresponds to y, so use self.x here.
         start = self.pole_y_start_m; end = self.pole_y_end_m;
         pole_mask = ((self.y >= start) & (self.y <= end))
@@ -281,7 +281,7 @@ class ElectricPotential(Potential):
         self.electrode_y_end_m = electrode_y_end_mm * 1e-3
         self.voltage = E0_Vm * self.gap_m
 
-    def apply_boundaries (self,potential):
+    def _apply_boundaries (self,potential):
          
          start = self.electrode_y_start_m; end = self.electrode_y_end_m
          V =  self.voltage
@@ -311,7 +311,7 @@ class MagneticField:
         self.Bx = None
 
 
-    def solve_field(self):
+    def _solve_field(self):
         psi = self.potential_object.potential
         self.By = np.zeros_like(psi, dtype=float)
         self.Bx = np.zeros_like(psi, dtype=float)   
@@ -332,7 +332,7 @@ class MagneticField:
         return self.By, self.Bx
     
     
-    def show_field(self):
+    def _show_field(self):
         
         By =  self.By; Bx = self.Bx;
         psi = self.potential_object.potential
@@ -375,6 +375,15 @@ class MagneticField:
         plt.gca().set_aspect("equal")
         plt.show()
     
+    def _get_magnetic_field(self,R_current_m):
+        
+        np.argmin(np.abs(self.x - R_current_m[0]))
+        np.argmin(np.abs(self.y - R_current_m[1]))
+        
+        
+        return
+        
+
 class ElectricField: 
     def __init__(self, potential_object):
         self.potential_object = potential_object
@@ -386,7 +395,7 @@ class ElectricField:
         self.Ey = None
         self.Ex = None
 
-    def solve_field(self):
+    def _solve_field(self):
         phi = self.potential_object.potential
 
         self.Ey = np.zeros_like(phi, dtype=float)
@@ -410,7 +419,7 @@ class ElectricField:
         return self.Ey, self.Ex
 
 
-    def show_field(self):
+    def _show_field(self):
         
         Ey =  self.Ey; Ex = self.Ex;
         phi = self.potential_object.potential
@@ -446,20 +455,20 @@ if __name__ == "__main__":
     phi = ElectricPotential(Ny=2**5+1, Nx=2**5+1, exp_range_Y_mm=exp_range_Y_mm, exp_range_X_mm=exp_range_X_mm, E0_Vm=10,
                             electrode_y_start_mm=-10, electrode_y_end_mm= 10)
     
-    phi.solve_potential()
+    phi._solve_potential()
     Ele = ElectricField(phi)
-    Ele.solve_field()
-    Ele.show_field()
+    Ele._solve_field()
+    Ele._show_field()
     
     
     if True:
         psi = MagneticPotential(Ny=2**5+1, Nx=2**6+1, exp_range_Y_mm=exp_range_Y_mm, exp_range_X_mm=exp_range_X_mm, B0_T=10,
                                 pole_y_start_mm=-40.0, pole_y_end_mm=20.0)
         
-        psi.solve_potential()
+        psi._solve_potential()
         mag = MagneticField(psi)
-        mag.solve_field()
-        mag.show_field()
+        mag._solve_field()
+        mag._show_field()
         
 
 
