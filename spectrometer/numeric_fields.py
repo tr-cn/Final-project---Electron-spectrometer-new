@@ -276,14 +276,14 @@ class MagneticPotential(Potential):
 
     
 class ElectricPotential(Potential):
-    def __init__(self,E0_Vm, electrode_y_start_mm, electrode_y_end_mm,**kwargs):
+    def __init__(self,Ex0_Vm, electrode_y_start_mm, electrode_y_end_mm,**kwargs):
         super().__init__(**kwargs)
 
-        self.E0_Vm = E0_Vm
+        self.Ex0_Vm = Ex0_Vm
         self.gap_m = np.diff(self.exp_range_X_m)[0]
         self.electrode_y_start_m = electrode_y_start_mm * 1e-3
         self.electrode_y_end_m = electrode_y_end_mm * 1e-3
-        self.voltage = E0_Vm * self.gap_m
+        self.voltage = Ex0_Vm * self.gap_m
 
     def _apply_boundaries (self,potential):
          
@@ -524,7 +524,7 @@ if __name__ == "__main__":
     exp_range_Y_mm = np.array([0,50.8])
     exp_range_X_mm = np.array([-6.25,6.25])
     
-    phi = ElectricPotential(Ny=2**5+1, Nx=2**5+1, exp_range_Y_mm=exp_range_Y_mm, exp_range_X_mm=exp_range_X_mm, E0_Vm=10,
+    phi = ElectricPotential(Ny=2**5+1, Nx=2**5+1, exp_range_Y_mm=exp_range_Y_mm, exp_range_X_mm=exp_range_X_mm, Ex0_Vm=10,
                             electrode_y_start_mm=-10, electrode_y_end_mm= 10)
     
     phi._solve_potential()

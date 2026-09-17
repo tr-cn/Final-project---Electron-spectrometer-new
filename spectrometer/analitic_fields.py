@@ -58,8 +58,8 @@ class Magenetic_field_Analitic:
     
     
 class Electric_field_Analitic:
-    def __init__(self, E0_Vm, width_mm=12.5, depth_mm=50.8, k=0, fringe=1, sharp_edge=1, yoke=1):
-        self.E0_Vm = E0_Vm
+    def __init__(self, Ex0_Vm, width_mm=12.5, depth_mm=50.8, k=0, fringe=1, sharp_edge=1, yoke=1):
+        self.Ex0_Vm = Ex0_Vm
         self.k = k
         self.fringe = fringe
         self.yoke = yoke
@@ -76,7 +76,7 @@ class Electric_field_Analitic:
 
     def _get_electric_field(self, R):
         if self.fringe == 0:
-            return np.array([0, self.E0_Vm, 0])
+            return np.array([0, self.Ex0_Vm, 0])
 
         x, y, z = R[0], R[1], R[2]
         y_complex = y + 1j*x
@@ -90,9 +90,9 @@ class Electric_field_Analitic:
             F_out = self._enge_func(y_complex_norm_out)
             F = F_in*F_out
 
-        Ex = self.E0_Vm * np.imag(F)
-        Ey = self.E0_Vm * np.real(F) * (1 - self.k*z)
-        Ez = self.E0_Vm * self.k * x
+        Ex = self.Ex0_Vm * np.real(F)
+        Ey = self.Ex0_Vm * np.imag(F) * (1 - self.k*z)
+        Ez = self.Ex0_Vm * self.k * x
         return np.array([Ex, Ey, Ez])
     
     

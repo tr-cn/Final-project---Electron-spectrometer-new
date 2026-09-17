@@ -18,7 +18,7 @@ def vel2gamma (v_m0s):
 class Experiment():
     def __init__(self, height_mm, width_mm, depth_mm, shield_mm, yoke, pinhole_dia_mm,
                  R0_mm, q_eng_MeV, m_kg, q_C,
-                 Bx0_T, Exz0_Vm, fringe, sharp_edge,
+                 Bx0_T, Ex0_Vm, fringe, sharp_edge,
                  N_steps = 150, CFL=0.1, solution = "Constant",
                  Nx_p = 2**5+1, Ny_p = 2**5+1):
         
@@ -39,7 +39,7 @@ class Experiment():
         self.q_C = q_C
         
         self.Bx0_T = Bx0_T
-        self.Exz0_Vm = Exz0_Vm
+        self.Ex0_Vm = Ex0_Vm
         self.fringe = fringe
         self.Nx_p = Nx_p
         self.Ny_p = Ny_p
@@ -162,7 +162,7 @@ class Experiment():
 if __name__ == "__main__":
     me_kg = 9.109*1e-31
     Bx0_T = 0.5
-    Exz0_Vm = 0
+    Ex0_Vm = 0
     E_V0m = np.array([0,0,0])
     R0_mm  = np.array([0,-12.5,0])
     e_C = -1.602*1e-19
@@ -183,7 +183,7 @@ if __name__ == "__main__":
                             yoke=yoke, pinhole_dia_mm=pinhole_dia_mm,
                             
                              R0_mm = R0_mm, q_eng_MeV = e_eng_MeV, m_kg=me_kg, q_C=e_C,
-                             Bx0_T=Bx0_T, Exz0_Vm=Exz0_Vm, fringe=fringe, sharp_edge = sharp_edge,
+                             Bx0_T=Bx0_T, Ex0_Vm=Ex0_Vm, fringe=fringe, sharp_edge = sharp_edge,
                              N_steps = N_steps, CFL=CFL, solution = solution)
        
     experiment._evaluate_exp_paramas()

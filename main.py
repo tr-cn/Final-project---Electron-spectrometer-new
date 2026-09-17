@@ -30,19 +30,19 @@ if __name__ == "__main__":
     e_eng_MeV = np.array([0,10,0])
     height_mm =26; width_mm = 12.5; depth_mm   = 50.8
     Bx0_T = 0.5
-    Exz0_Vm = [0,0,0]#[100/(width_mm*1-3),0,0] #[0,0,1/(height_mm*1-3)] # 
-    yoke = 0
+    Ex0_Vm = 0#[100/(width_mm*1-3),0,0] #[0,0,1/(height_mm*1-3)] # 
+    yoke = 1
     shield_mm = 0
     pinhole_dia_mm = 3
-    fringe = 1
+    fringe = 0
     CFL = 0.1
-    N_steps = 1.5*1e4
+    N_steps = 1.5*1e3
     pinhole_dia_mm = 3
     solution = "Analitic field" # "Numeric Field" # 
     sharp_edge = 1
     
-    Nx_p = 2**5 + 1;
-    Ny_p = 2**5 + 1;
+    Nx_p = 2**6 + 1;
+    Ny_p = 2**6 + 1;
     
 
     spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     experiment = Experiment(
                             height_mm = height_mm, width_mm = width_mm, depth_mm = depth_mm, shield_mm = shield_mm, pinhole_dia_mm = pinhole_dia_mm, yoke = yoke, # Spectrometere and simulation border
                             R0_mm= R0_mm, q_eng_MeV = e_eng_MeV, m_kg = me_kg, q_C = e_C, # Particle parameters
-                            Bx0_T = Bx0_T, Exz0_Vm = Exz0_Vm, fringe = fringe, sharp_edge = sharp_edge, # Fildes parameters
+                            Bx0_T = Bx0_T, Ex0_Vm = Ex0_Vm, fringe = fringe, sharp_edge = sharp_edge, # Fildes parameters
                             CFL = CFL, N_steps = N_steps, solution = solution, # Simulation resolutions
                             Nx_p = Nx_p, Ny_p = Ny_p # Potential solving
                             )
@@ -60,10 +60,18 @@ if __name__ == "__main__":
     params = experiment.params
     
 
+    params["solution"] = "Analitic field"
+    integrator_anal = Integrators(params)
     
-    integrator = Integrators(params)
-    Y_mm = integrator._analitic_sol_vel2dist()
+    params["solution"] = "Numeric Field"
+    integrator_num = Integrators(params)
+    
+    
+    Y_mm = integrator_anal._analitic_sol_vel2dist()
     print(Y_mm)
+    
+    
+    
     
     
     
@@ -79,13 +87,13 @@ if __name__ == "__main__":
     
     
     
-    integrator.solution = "Analitic field"
-    R_vec_mm,v_vec_m0s,gamma_vec = integrator._RK2 ()
+    
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator_anal._RK2 ()
     pr.trajectory_plot(ax, R_vec_mm)
     print(R_vec_mm[-1])
     
-    integrator.solution = "Numeric Field"
-    R_vec_mm,v_vec_m0s,gamma_vec = integrator._RK2 ()
+    
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator_num._RK2 ()
     pr.trajectory_plot(ax, R_vec_mm)
     print(R_vec_mm[-1])
     

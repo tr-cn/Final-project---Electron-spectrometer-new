@@ -65,20 +65,13 @@ class Integrators():
         if self.solution == "Analitic field":
             self.mag = Magenetic_field_Analitic(Bx0_T=self.Bx0_T, width_mm=self.width_mm, depth_mm=self.depth_mm,
                                            k=self.k, fringe = self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)
-            
-            
-            if any (self.Exz0_Vm):
-                if self.Exz0_Vm[0] != 0:
-                      self.Ele = Electric_field_Analitic(E0_Vm = self.Exz0_Vm[0], width_mm=self.width_mm, depth_mm=self.depth_mm, 
-                                                         k=self.k, fringe=self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)  
-                elif self.Exz0_Vm[2] != 0:
-                    self.Ele = Electric_field_Analitic(E0_Vm = self.Exz0_Vm[2], width_mm=self.width_mm, depth_mm=self.depth_mm, 
-                                                       k=self.k, fringe=self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)
-                elif all(self.Exz0_Vm==0):
-                    self.Ele = self.Exz0_Vm
-            
-            
-            
+        
+            if self.Ex0_Vm != 0:
+                self.Ele = Electric_field_Analitic(Ex0_Vm = self.Ex0_Vm[0], width_mm=self.width_mm, depth_mm=self.depth_mm, 
+                                                             k=self.k, fringe=self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)              
+               
+        
+        
         elif self.solution == "Numeric Field":
             self.psi = MagneticPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, B0_T=self.Bx0_T,
                                     pole_y_start_mm=0, pole_y_end_mm=self.depth_mm)
@@ -88,15 +81,9 @@ class Integrators():
             self.mag._solve_field()
             
             
-            if any (self.Exz0_Vm):
-                if self.Exz0_Vm[0] != 0:
-                    self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, E0_Vm=self.Exz0_Vm[0],
+            if self.Ex0_Vm != 0:
+                self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm[0],
                                        electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
-                    
-                elif self.Exz0_Vm[2] != 0:
-                    self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_Z_mm=self.exp_range_X_mm, E0_Vm=self.Exz0_Vm[2],
-                                       electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
-                
                 self.phi._solve_potential()
                 self.Ele = ElectricField(self.phi)
                 self.Ele._solve_field()
@@ -152,20 +139,15 @@ class Integrators():
                 if R_current_m[1]<0:
                     return [0,0,0]
                 else:
-                    return self.Exz0_Vm
+                    return self.Ex0_Vm
                 
             if self.fringe == 1:
                 
-                if any (self.Exz0_Vm):
-                    if self.Exz0_Vm[0] != 0:
-                        E_p = self.Ele._get_electric_field(R_current_m)
-                        return E_p
-                    elif self.Exz0_Vm[2] != 0:
-                        E_p = self.Ele._get_electric_field(R_current_m)
-                        E_pp = np.array([E_p[2],E_p[1],E_p[0]])
-                        return E_pp
+                if self.Ex0_Vm != 0:
+                    E_p = self.Ele._get_electric_field(R_current_m)
                 else:
-                    return np.array([0,0,0])
+                    E_p = np.array([0,0,0])
+                return E_p
                         
                 # mag = Magenetic_field_Analitic(self.Bx0_T, self.width_mm, self.depth_mm, self.k, self.fringe, self.sharp_edge, self.yoke)
                 # return  mag._get_magnetic_field(R_current_m)
@@ -174,8 +156,10 @@ class Integrators():
                 
         elif self.solution ==  "Numeric Field":
                # print(R_current_m*1e3)
-               E_p =  self.Ele._get_electric_field(R_current_m)
-               
+               if self.Ex0_Vm != 0: 
+                   E_p =  self.Ele._get_electric_field(R_current_m)
+               else:
+                   E_p = np.array([0,0,0])
                return E_p
 
     def _euler (self):
