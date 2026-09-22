@@ -49,7 +49,7 @@ class Potential:
     
     
     def _potential_init(self):
-        potential0 = np.random.rand(self.Ny, self.Nx) # [raws,colmns]
+        potential0 = np.zeros([self.Ny, self.Nx]) # [raws,colmns]
         potential0 = self._apply_boundaries (potential0)
         
         return potential0
@@ -235,6 +235,7 @@ class Potential:
     def _solve_potential (self):
         potential_0 = self._potential_init()
         self.potential   = self._laplace_func(potential_0)
+        
         return self.potential 
     
     def _show_potential(self):
@@ -263,16 +264,19 @@ class MagneticPotential(Potential):
         # The second index corresponds to y, so use self.x here.
         start = self.pole_y_start_m; end = self.pole_y_end_m;
         pole_mask = ((self.y >= start) & (self.y <= end))
-
         # Set all external boundaries to zero first.
         potential[0, :] = 0.0; potential[-1, :] = 0.0;
         potential[:, 0] = 0.0; potential[:, -1] = 0.0
 
         # Pole faces at y = ymin and y = ymax.
-        potential[pole_mask,0] = +0.5 * self.delta_psi
-        potential[pole_mask, -1] = -0.5 * self.delta_psi
+        potential[pole_mask,0] = +0.5
+        potential[pole_mask, -1] = -0.5
         potential[0,1:-1] = 0; potential[-1,1:-1] = 0;
         return potential
+    
+    def _solve_potential (self):
+        potential_0 = self._potential_init()
+        self.potential   = self._laplace_func(potential_0) * self.delta_psi
 
     
 class ElectricPotential(Potential):
@@ -294,14 +298,18 @@ class ElectricPotential(Potential):
          potential[0, :] = 0.0; potential[-1, :] = 0.0;
          potential[:, 0] = 0.0; potential[:, -1] = 0.0
 
-         potential[electrode_mask,0] = +0.5 * V
-         potential[electrode_mask,-1] = -0.5 * V
+         potential[electrode_mask,0] = +0.5
+         potential[electrode_mask,-1] = -0.5
          
          
          potential[0,1:-1] = 0; potential[-1,1:-1] = 0;
      
          return  potential   
 
+
+    def _solve_potential (self):
+        potential_0 = self._potential_init()
+        self.potential   = self._laplace_func(potential_0) * self.voltage
             
 class MagneticField:
     def __init__(self, potential_object):

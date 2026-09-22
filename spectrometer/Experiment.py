@@ -22,19 +22,19 @@ class Experiment():
                  N_steps = 150, CFL=0.1, solution = "Constant",
                  Nx_p = 2**5+1, Ny_p = 2**5+1):
         
-        self.width_mm = width_mm; self.w_m = self.width_mm*1e-3 / 2
-        self.height_mm = height_mm; self.h_m = self.height_mm*1e-3 / 2
-        self.depth_mm = depth_mm; self.d_m = self.depth_mm*1e-3
-        self.shield_mm = shield_mm; self.s_m = self.shield_mm*1e-3
+        self.width_mm = width_mm; 
+        self.height_mm = height_mm; 
+        self.depth_mm = depth_mm; 
+        self.shield_mm = shield_mm; 
         self.yoke = yoke
         self.pinhole_dia_mm = pinhole_dia_mm
-        self.pinhole_rad_m = self.pinhole_dia_mm*1e-3 /2
+        
         
         self.R0_mm = R0_mm
         # self.R0_m = [R0_mm[0]*1e-3,R0_mm[1]*1e-3,R0_mm[2]*1e-3]
-        self.R0_m = np.array(R0_mm)*1e-3
+        
         self.q_eng_MeV = q_eng_MeV
-        self.q_eng_J = abs(q_eng_MeV)*1e6 * 1.602*1e-19
+        
         self.m_kg = m_kg
         self.q_C = q_C
         
@@ -49,7 +49,18 @@ class Experiment():
         self.solution = solution # can get "Constant"  "Analitic"  "Numeric"
         self.sharp_edge = sharp_edge
         
+        
+        
+    def _convert(self):
+        self.w_m = self.width_mm*1e-3 / 2
+        self.h_m = self.height_mm*1e-3 / 2
+        self.d_m = self.depth_mm*1e-3
+        self.s_m = self.shield_mm*1e-3
+        self.pinhole_rad_m = self.pinhole_dia_mm*1e-3 /2
+        self.R0_m = np.array(self.R0_mm)*1e-3
+        self.q_eng_J = abs(self.q_eng_MeV)*1e6 * 1.602*1e-19
         self.v0_m0s =  MeV2m0s(self.q_eng_J, self.m_kg)
+        
         
     def _get_T_cyclotorn(self):
     
@@ -137,6 +148,7 @@ class Experiment():
 
     
     def _evaluate_exp_paramas(self):
+        self._convert()
         self._get_T_cyclotorn()
         self._get_dt()
         self._get_dr()

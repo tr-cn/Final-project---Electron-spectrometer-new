@@ -67,7 +67,7 @@ class Integrators():
                                            k=self.k, fringe = self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)
         
             if self.Ex0_Vm != 0:
-                self.Ele = Electric_field_Analitic(Ex0_Vm = self.Ex0_Vm[0], width_mm=self.width_mm, depth_mm=self.depth_mm, 
+                self.Ele = Electric_field_Analitic(Ex0_Vm = self.Ex0_Vm, width_mm=self.width_mm, depth_mm=self.depth_mm, 
                                                              k=self.k, fringe=self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)              
                
         
@@ -82,12 +82,44 @@ class Integrators():
             
             
             if self.Ex0_Vm != 0:
-                self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm[0],
+                self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm,
                                        electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
                 self.phi._solve_potential()
                 self.Ele = ElectricField(self.phi)
                 self.Ele._solve_field()
+                
 
+        
+    def _update_params(self,params):
+        self.__dict__.update(params)
+    
+    def _update_solution(self,solution):
+        self.solution = solution
+        if self.solution == "Analitic field":
+            self.mag = Magenetic_field_Analitic(Bx0_T=self.Bx0_T, width_mm=self.width_mm, depth_mm=self.depth_mm,
+                                           k=self.k, fringe = self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)
+        
+            if self.Ex0_Vm != 0:
+                self.Ele = Electric_field_Analitic(Ex0_Vm = self.Ex0_Vm, width_mm=self.width_mm, depth_mm=self.depth_mm, 
+                                                             k=self.k, fringe=self.fringe, sharp_edge=self.sharp_edge, yoke=self.yoke)              
+               
+        
+        
+        elif self.solution == "Numeric Field":
+            self.psi = MagneticPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, B0_T=self.Bx0_T,
+                                    pole_y_start_mm=0, pole_y_end_mm=self.depth_mm)
+            self.psi._solve_potential()
+            
+            self.mag = MagneticField(self.psi)
+            self.mag._solve_field()
+            
+            
+            if self.Ex0_Vm != 0:
+                self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm,
+                                       electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
+                self.phi._solve_potential()
+                self.Ele = ElectricField(self.phi)
+                self.Ele._solve_field()
 
     def _analitic_sol_vel2dist (self):
         
@@ -111,7 +143,7 @@ class Integrators():
             
             return abs(R_current_m[2]) < self.pinhole_rad_m  and abs(R_current_m[0]) < self.pinhole_rad_m
         
-        return abs(R_current_m[2]) < self.h_m and R_current_m[1] < self.d_m and abs(R_current_m[0]) < abs (self.w_m)
+        return abs(R_current_m[2]) < self.h_m and R_current_m[1] < self.d_m and abs(R_current_m[0]) < abs (self.w_m/2)
     
     
     def _get_magnetic_field(self,R_current_m):
@@ -139,7 +171,7 @@ class Integrators():
                 if R_current_m[1]<0:
                     return [0,0,0]
                 else:
-                    return self.Ex0_Vm
+                    return np.array([self.Ex0_Vm,0,0])
                 
             if self.fringe == 1:
                 

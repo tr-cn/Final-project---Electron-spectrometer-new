@@ -15,7 +15,7 @@ from spectrometer.integrators import Integrators
 # import spectrometer.integrators as integ
 import spectrometer.plot_result as pr
 import spectrometer.analitic_fields as analitic_fields
-
+from spectrometer.simulators import *
 
 
 
@@ -24,25 +24,25 @@ if __name__ == "__main__":
    
     
     me_kg = 9.109*1e-31
-    E_V0m = np.array([0,0,0])
     R0_mm  = np.array([0,-12.5,0])
     e_C = -1.602*1e-19
     e_eng_MeV = np.array([0,10,0])
     height_mm =26; width_mm = 12.5; depth_mm   = 50.8
     Bx0_T = 0.5
-    Ex0_Vm = 0#[100/(width_mm*1-3),0,0] #[0,0,1/(height_mm*1-3)] # 
+    Ex0_Vm = 0
     yoke = 1
     shield_mm = 0
     pinhole_dia_mm = 3
     fringe = 0
     CFL = 0.1
-    N_steps = 1.5*1e3
+    N_steps = 5*1e1
     pinhole_dia_mm = 3
-    solution = "Analitic field" # "Numeric Field" # 
+    solution = "Numeric Field" # "Analitic field" #  
+    rand = "uni" # exp #gauss # "None"
     sharp_edge = 1
     
-    Nx_p = 2**6 + 1;
-    Ny_p = 2**6 + 1;
+    Nx_p = 2**5 + 1;
+    Ny_p = 2**5 + 1;
     
 
     spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
@@ -60,15 +60,15 @@ if __name__ == "__main__":
     params = experiment.params
     
 
-    params["solution"] = "Analitic field"
-    integrator_anal = Integrators(params)
+    # params["solution"] = "Analitic field"
+    # integrator_anal = Integrators(params)
     
     params["solution"] = "Numeric Field"
     integrator_num = Integrators(params)
     
     
-    Y_mm = integrator_anal._analitic_sol_vel2dist()
-    print(Y_mm)
+    # Y_mm = integrator_anal._analitic_sol_vel2dist()
+    # print(Y_mm)
     
     
     
@@ -88,9 +88,9 @@ if __name__ == "__main__":
     
     
     
-    R_vec_mm,v_vec_m0s,gamma_vec = integrator_anal._RK2 ()
-    pr.trajectory_plot(ax, R_vec_mm)
-    print(R_vec_mm[-1])
+    # R_vec_mm,v_vec_m0s,gamma_vec = integrator_anal._RK2 ()
+    # pr.trajectory_plot(ax, R_vec_mm)
+    # print(R_vec_mm[-1])
     
     
     R_vec_mm,v_vec_m0s,gamma_vec = integrator_num._RK2 ()
@@ -98,6 +98,20 @@ if __name__ == "__main__":
     print(R_vec_mm[-1])
     
   
+    integrator_num.R0_mm = np.array([-1,0.000,1])
+    R_vec_mm,v_vec_m0s,gamma_vec = integrator_num._RK2 ()
+    pr.trajectory_plot(ax, R_vec_mm)
+    print(R_vec_mm[-1])
+    print(integrator_num.q_eng_MeV)
+    
+    
+    
+    
+    
+    e_engs_MeV = np.array([[0,3,0],[0,6,0],[0,10,0]])
+    
+    
+    simulation_engs_collimated(integrator_num, experiment, e_engs_MeV,ax)
     
     
     
