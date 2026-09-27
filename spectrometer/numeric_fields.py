@@ -269,8 +269,8 @@ class MagneticPotential(Potential):
         potential[:, 0] = 0.0; potential[:, -1] = 0.0
 
         # Pole faces at y = ymin and y = ymax.
-        potential[pole_mask,0] = +0.5
-        potential[pole_mask, -1] = -0.5
+        potential[pole_mask,np.argmin(np.abs(self.x - ((-self.gap_m/2))))] = +0.5
+        potential[pole_mask,np.argmin(np.abs(self.x - ((self.gap_m/2))))]  = -0.5
         potential[0,1:-1] = 0; potential[-1,1:-1] = 0;
         return potential
     
@@ -298,8 +298,8 @@ class ElectricPotential(Potential):
          potential[0, :] = 0.0; potential[-1, :] = 0.0;
          potential[:, 0] = 0.0; potential[:, -1] = 0.0
 
-         potential[electrode_mask,0] = +0.5
-         potential[electrode_mask,-1] = -0.5
+         potential[electrode_mask,np.argmin(np.abs(self.x - ((-self.gap_m/2))))] = +0.5
+         potential[electrode_mask,np.argmin(np.abs(self.x - ((self.gap_m/2))))]  = -0.5
          
          
          potential[0,1:-1] = 0; potential[-1,1:-1] = 0;
@@ -400,16 +400,17 @@ class MagneticField:
             xi1 = xi+1
             yi1 = yi+1
 
-            frac_x = (x_c-x0) / (x1 - x0) 
-            frac_y = (y_c-y0) / (y1 - y0) 
+            frac_x = np.clip((x_c-x0) / (x1 - x0), 0.0, 1.0) 
+            frac_y = np.clip((y_c-y0) / (y1 - y0), 0.0, 1.0) 
 
-            B00 = B[yi,xi]
-            B01 = B[yi,xi1]
-            B10 = B[yi1,xi]
-            B11 = B[yi1,xi1]
+            B00 = B[yi,  xi]
+            B01 = B[yi,  xi1]   
+            B10 = B[yi1, xi]
+            B11 = B[yi1, xi1]
+
             
-            Bxc_y0 = (B10-B00)*frac_x  + B00
-            Bxc_y1 = (B11-B01)*frac_x  + B01
+            Bxc_y0 = (B01 - B00)*frac_x + B00 
+            Bxc_y1 = (B11 - B10)*frac_x + B10
             
             Bxc_yc = (Bxc_y1 - Bxc_y0)*frac_y + Bxc_y0
             return Bxc_yc
@@ -495,16 +496,19 @@ class ElectricField:
             xi1 = xi+1
             yi1 = yi+1
 
-            frac_x = (x_c-x0) / (x1 - x0) 
-            frac_y = (y_c-y0) / (y1 - y0) 
+            frac_x = np.clip((x_c-x0) / (x1 - x0), 0.0, 1.0) 
+            frac_y = np.clip((y_c-y0) / (y1 - y0), 0.0, 1.0)
 
-            E00 = E[yi,xi]
-            E01 = E[yi,xi1]
-            E10 = E[yi1,xi]
-            E11 = E[yi1,xi1]
-            
-            Exc_y0 = (E10-E00)*frac_x  + E00
-            Exc_y1 = (E11-E01)*frac_x  + E01
+            E00 = E[yi,  xi]
+            E01 = E[yi,  xi1]   
+            E10 = E[yi1, xi]
+            E11 = E[yi1, xi1]
+
+
+
+
+            Exc_y0 = (E01-E00)*frac_x  + E00
+            Exc_y1 = (E11-E10)*frac_x  + E10
             
             Exc_yc = (Exc_y1 - Exc_y0)*frac_y + Exc_y0
             return Exc_yc

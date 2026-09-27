@@ -24,20 +24,20 @@ if __name__ == "__main__":
    
     
     me_kg = 9.109*1e-31
-    R0_mm  = np.array([0,-12.5,0])
+    R0_mm  = np.array([0,0,0])
     e_C = -1.602*1e-19
     e_eng_MeV = np.array([0,10,0])
     height_mm =26; width_mm = 12.5; depth_mm   = 50.8
     Bx0_T = 0.5
-    Ex0_Vm = 0
+    Ex0_Vm = 0*1e8
     yoke = 1
     shield_mm = 0
     pinhole_dia_mm = 3
-    fringe = 0
+    fringe = 1
     CFL = 0.1
-    N_steps = 5*1e1
+    N_steps = 5*1e3
     pinhole_dia_mm = 3
-    solution = "Numeric Field" # "Analitic field" #  
+    solution =   "Numeric Field" # "Analitic field" #  
     rand = "uni" # exp #gauss # "None"
     sharp_edge = 1
     
@@ -45,8 +45,8 @@ if __name__ == "__main__":
     Ny_p = 2**5 + 1;
     
 
-    spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
-    fig,ax = spec._draw_spec()
+    # spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
+    # fig,ax = spec._draw_spec()
     
     experiment = Experiment(
                             height_mm = height_mm, width_mm = width_mm, depth_mm = depth_mm, shield_mm = shield_mm, pinhole_dia_mm = pinhole_dia_mm, yoke = yoke, # Spectrometere and simulation border
@@ -60,60 +60,45 @@ if __name__ == "__main__":
     params = experiment.params
     
 
-    # params["solution"] = "Analitic field"
-    # integrator_anal = Integrators(params)
+    if True:#False:
+        params["solution"] = "Analitic field"
     
-    params["solution"] = "Numeric Field"
-    integrator_num = Integrators(params)
+        integrator = Integrators(params)
     
-    
-    # Y_mm = integrator_anal._analitic_sol_vel2dist()
-    # print(Y_mm)
-    
+    if False:#True:
+        params["solution"] = "Numeric Field"
+        integrator = Integrators(params)
     
     
     
     
+    # e_engs_y_MeV = [i for i in np.linspace(0.5, 15,4)]
+    # e_engs_y_MeV = 0.6
+
+    # e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(0.6, 15,4)])
+    # e_engs_MeV = np.array([0,0.3,0])
     
-    # integrator.solution = "Numeric Field"
-    # R_vec_mm,v_vec_m0s,gamma_vec = integrator._euler ()
-    # pr.trajectory_plot(ax, R_vec_mm)
-    # print(R_vec_mm[-1])
+    # integrator_name = "Boris"#"Euler"#"RK4"#"RK2"
     
-    # integrator.solution = "Analitic field"
-    # R_vec_mm,v_vec_m0s,gamma_vec = integrator._euler ()
-    # pr.trajectory_plot(ax, R_vec_mm)
-    # print(R_vec_mm[-1])
-    
+    # basic_simulator(integrator,integrator_name, experiment, e_engs_MeV,show_tragectories = True)
     
     
-    
-    # R_vec_mm,v_vec_m0s,gamma_vec = integrator_anal._RK2 ()
-    # pr.trajectory_plot(ax, R_vec_mm)
-    # print(R_vec_mm[-1])
-    
-    
-    R_vec_mm,v_vec_m0s,gamma_vec = integrator_num._RK2 ()
-    pr.trajectory_plot(ax, R_vec_mm)
-    print(R_vec_mm[-1])
-    
-  
-    integrator_num.R0_mm = np.array([-1,0.000,1])
-    R_vec_mm,v_vec_m0s,gamma_vec = integrator_num._RK2 ()
-    pr.trajectory_plot(ax, R_vec_mm)
-    print(R_vec_mm[-1])
-    print(integrator_num.q_eng_MeV)
+    integrator_name = "Boris" #"Boris"#"Euler"#"RK4"#"RK2"
+    e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(0.6, 15,4)])
+    N_steps_vec = [5e3,1e4,5e4]
+    # basic_simulator(integrator,integrator_name, experiment, e_engs_MeV,show_tragectories = True)
+    integrators_name = ["Boris","RK2","RK4","Euler"]
+    energy_vs_N_steps_for_different_integrators(integrator,integrators_name, experiment, e_engs_MeV,N_steps_vec)
+        
     
     
     
     
-    
-    e_engs_MeV = np.array([[0,3,0],[0,6,0],[0,10,0]])
-    
-    
-    simulation_engs_collimated(integrator_num, experiment, e_engs_MeV,ax)
+    # simulation_engs_collimated(integrator_anal, experiment, e_engs_MeV,ax)
     
     
+    
+        
     
     
     # integrator.solution = "Numeric Field"

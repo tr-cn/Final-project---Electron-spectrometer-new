@@ -119,6 +119,7 @@ class Spectrometer_Budy():
         ax.tick_params(axis='both', labelsize = tic_fontsize,  )
     
         ax.view_init(elev=15, azim=335)
+        # ax.view_init(elev=90, azim=0)
         ax.dist = 9
         #plt.show()
         self.fig = fig

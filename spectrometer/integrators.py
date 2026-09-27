@@ -143,7 +143,7 @@ class Integrators():
             
             return abs(R_current_m[2]) < self.pinhole_rad_m  and abs(R_current_m[0]) < self.pinhole_rad_m
         
-        return abs(R_current_m[2]) < self.h_m and R_current_m[1] < self.d_m and abs(R_current_m[0]) < abs (self.w_m/2)
+        return abs(R_current_m[2]) < self.h_m and R_current_m[1] < self.d_m and abs(R_current_m[0]) < abs (self.w_m)
     
     
     def _get_magnetic_field(self,R_current_m):
@@ -159,6 +159,10 @@ class Integrators():
                 return  self.mag._get_magnetic_field(R_current_m)
         elif self.solution ==  "Numeric Field":
                # print(R_current_m*1e3)
+               if self.fringe == 0:
+                   if R_current_m[1]<0:
+                       return np.array([0,0,0])
+             
                B_p =  self.mag._get_magnetic_field(R_current_m)
                
                return B_p
@@ -193,6 +197,48 @@ class Integrators():
                else:
                    E_p = np.array([0,0,0])
                return E_p
+           
+            
+           
+    def _exect_exist(self,R_m,v_ms):
+        
+        if abs((R_m[-1][2]))>self.h_m:
+            frac = abs((self.h_m - abs(R_m[-2][2])) / (R_m[-1][2]) - abs(R_m[-2][2]))
+        
+        elif abs((R_m[-1][0]))>self.w_m:
+            frac = abs((self.w_m - abs(R_m[-2][0])) / (R_m[-1][0]) - abs(R_m[-2][0]))   
+        
+        elif (R_m[-1][1])>self.d_m:
+            frac = abs((self.d_m - abs(R_m[-2][1])) / (R_m[-1][1]) - abs(R_m[-2][1]))   
+        elif (R_m[-1][1])<0:
+            frac = abs((0 - abs(R_m[-2][1])) / (R_m[-1][1]) - abs(R_m[-2][1]))   
+            
+        v_minus2 = v_ms[-2]
+        v_minus1 = v_ms[-1]
+        
+        mag_minus2 = np.linalg.norm(v_minus2)
+        mag_minus1 = np.linalg.norm(v_minus1)
+        mag_exit = mag_minus2 + frac * (mag_minus1 - mag_minus2)    
+        
+        dir_minus2 = v_minus2 / mag_minus2
+        dir_minus1 = v_minus1 / mag_minus1
+        dir_exit_raw = dir_minus2 + frac * (dir_minus1 - dir_minus2)
+        dir_exit = dir_exit_raw / np.linalg.norm(dir_exit_raw)       
+       
+        R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
+        v_exit_m0s = dir_exit * mag_exit
+        gamma_exit = vel2gamma(v_exit_m0s)
+        
+        
+        
+        
+        return R_exit_m, v_exit_m0s, gamma_exit
+
+        
+        
+        
+        
+        
 
     def _euler (self):
         
@@ -233,16 +279,16 @@ class Integrators():
             self.gamma_vec.append(gamma_current)
             
         
-        frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
+        # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
         
-        R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
-        v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
-        gamma_exit = vel2gamma(v_exit_m0s)
+        # R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
+        # v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
+        # gamma_exit = vel2gamma(v_exit_m0s)
         
-        self.R_vec_m[-1] = R_exit_m
-        self.v_vec_m0s[-1] = v_exit_m0s
-        self.gamma_vec[-1] = gamma_exit
-        
+        # self.R_vec_m[-1] = R_exit_m
+        # self.v_vec_m0s[-1] = v_exit_m0s
+        # self.gamma_vec[-1] = gamma_exit
+        self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
         
@@ -304,16 +350,16 @@ class Integrators():
             self.R_vec_m.append(R_current_m)
             self.gamma_vec.append(gamma_current)
             
-        frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
+        # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
         
-        R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
-        v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
-        gamma_exit = vel2gamma(v_exit_m0s)
+        # R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
+        # v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
+        # gamma_exit = vel2gamma(v_exit_m0s)
         
-        self.R_vec_m[-1] = R_exit_m
-        self.v_vec_m0s[-1] = v_exit_m0s
-        self.gamma_vec[-1] = gamma_exit
-        
+        # self.R_vec_m[-1] = R_exit_m
+        # self.v_vec_m0s[-1] = v_exit_m0s
+        # self.gamma_vec[-1] = gamma_exit
+        self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
         
@@ -404,17 +450,17 @@ class Integrators():
             self.R_vec_m.append(R_current_m)
             self.gamma_vec.append(gamma_current)
             
-        frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
+        # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
         
-        R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
-        v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
-        gamma_exit = vel2gamma(v_exit_m0s)
+        # R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
+        # v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
+        # gamma_exit = vel2gamma(v_exit_m0s)
         
-        self.R_vec_m[-1] = R_exit_m
-        self.v_vec_m0s[-1] = v_exit_m0s
-        self.gamma_vec[-1] = gamma_exit
+        # self.R_vec_m[-1] = R_exit_m
+        # self.v_vec_m0s[-1] = v_exit_m0s
+        # self.gamma_vec[-1] = gamma_exit
         
-        
+        self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
@@ -424,9 +470,9 @@ class Integrators():
         dt_s = self.dt_s
         
         R_current_m = self.R0_m
-        B_T = self._get_magnetic_field(R_current_m);
+        # B_T = self._get_magnetic_field(R_current_m);
         E_Vm = self._get_electric_field(R_current_m)
-        dv_dt_0_m0s2 = get_lorentz_acceleration(self.q_C,self.gamma0,self.m_kg,E_Vm,self.v0_m0s,B_T)
+        dv_dt_0_m0s2 = get_electric_acceleration(self.q_C,self.gamma0,self.m_kg,E_Vm,self.v0_m0s,B_T=None)
         
         v_minus_half_m0s = self.v0_m0s - 1/2 * dv_dt_0_m0s2 * dt_s
         
@@ -473,15 +519,9 @@ class Integrators():
             
             self.gamma_vec.append(gamma_current)
             
-        frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
+            
+        self.R_vec_m[-1], self.v_minus_half_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_minus_half_vec_m0s)
         
-        R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
-        v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
-        gamma_exit = vel2gamma(v_exit_m0s)
-        
-        self.R_vec_m[-1] = R_exit_m
-        self.v_vec_m0s[-1] = v_exit_m0s
-        self.gamma_vec[-1] = gamma_exit
         
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_minus_half_vec_m0s,self.gamma_vec

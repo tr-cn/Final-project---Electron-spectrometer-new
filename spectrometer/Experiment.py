@@ -88,18 +88,31 @@ class Experiment():
         
         self.z_start_mm = -self.height_mm/2
         self.z_end_mm   =  self.height_mm/2
+
         
-        
-        if abs(self.R0_mm[1])> abs(self.shield_mm):
-            self.y_start_mm = -abs(self.R0_mm[1])
-        else:
-            self.y_start_mm = -abs(self.shield_mm)
-        
-        if self.yoke == 1:
+        self.y_start_mm = min(-max(self.shield_mm,15),self.R0_mm[1]) - 10
+        if self.yoke==1:
             self.y_end_mm = self.depth_mm
-                 
         elif self.yoke == 0:
-            self.y_end_mm = self.depth_mm + abs(self.shield_mm)
+            self.y_end_mm = self.depth_mm + max(self.shield_mm,15,abs(self.R0_mm[1])) + 10
+            
+            
+            
+        # if yoke:
+        #     if fringe:
+        #         Y_depth = np.linspace(min (-max(shield_mm,15),field.R0_mm[1]), depth_mm * 1, ny) * 1e-3 
+        #     else:
+        #         Y_depth = np.linspace(0, depth_mm * 1, ny) * 1e-3 
+        # else:
+        #     if fringe:
+        #         Y_depth = np.linspace(min (-max(shield_mm,15),field.R0_mm[1]), depth_mm + max(shield_mm,15,abs[field.R0_mm[1]]), ny) * 1e-3 
+        #     else:
+        #         Y_depth = np.linspace(0, depth_mm, ny) * 1e-3    
+            
+            
+            
+            
+        
     
         self.exp_range_X_mm = np.array([self.x_start_mm, self.x_end_mm])
         self.exp_range_Y_mm = np.array([self.y_start_mm, self.y_end_mm])
@@ -145,6 +158,10 @@ class Experiment():
         self.Lz_mm = np.linspace(self.z_start_mm, self.z_end_mm,self.Nz)
         return  self.Lx_mm,  self.Ly_mm,  self.Lz_mm
     
+    def _update_params(self,params):
+        self.__dict__.update(params)
+        self.params = self._evaluate_exp_paramas()
+        return self.params
 
     
     def _evaluate_exp_paramas(self):
