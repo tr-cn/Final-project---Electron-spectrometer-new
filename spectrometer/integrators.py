@@ -92,6 +92,10 @@ class Integrators():
         
     def _update_params(self,params):
         self.__dict__.update(params)
+        self._update_solution(self.solution)
+        self.params = params
+        
+        
     
     def _update_solution(self,solution):
         self.solution = solution
@@ -201,17 +205,25 @@ class Integrators():
             
            
     def _exect_exist(self,R_m,v_ms):
+        frac =0 # for non entry situation
         
-        if abs((R_m[-1][2]))>self.h_m:
-            frac = abs((self.h_m - abs(R_m[-2][2])) / (R_m[-1][2]) - abs(R_m[-2][2]))
+        if (R_m[-1][2])>self.h_m:
+            frac = (self.h_m - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
         
-        elif abs((R_m[-1][0]))>self.w_m:
-            frac = abs((self.w_m - abs(R_m[-2][0])) / (R_m[-1][0]) - abs(R_m[-2][0]))   
+        elif (R_m[-1][2])<-self.h_m:
+            frac = (-self.h_m - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
+        
+        elif (R_m[-1][0])>self.w_m:
+            frac = (self.w_m - R_m[-2][0]) / (R_m[-1][0] - R_m[-2][0])  
+        
+        elif R_m[-1][0]<-self.w_m:
+            frac = (-self.w_m - R_m[-2][0]) / (R_m[-1][0] - R_m[-2][0]) 
         
         elif (R_m[-1][1])>self.d_m:
-            frac = abs((self.d_m - abs(R_m[-2][1])) / (R_m[-1][1]) - abs(R_m[-2][1]))   
+            frac = (self.d_m - R_m[-2][1]) / (R_m[-1][1] - R_m[-2][1])  
+        
         elif (R_m[-1][1])<0:
-            frac = abs((0 - abs(R_m[-2][1])) / (R_m[-1][1]) - abs(R_m[-2][1]))   
+            frac = (0 - abs(R_m[-2][1]) / (R_m[-1][1]) - abs(R_m[-2][1]))   
             
         v_minus2 = v_ms[-2]
         v_minus1 = v_ms[-1]

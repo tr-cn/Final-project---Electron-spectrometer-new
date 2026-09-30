@@ -29,7 +29,7 @@ def get_magnetic_rotation(q_C,gamma_m1,m_kg,E_V0m,v1_m0s,B_T,dt_s):
 
 
 
-def Velocity_devider (Velocity, y,theta_rad,phi_rad):
+def velocity_devider (Velocity, theta_rad,phi_rad):
     # Rotated shpherical coorditat system so that when theta and phi are 0 the particlel will continue to y direction
     # theta_rad is the elevation 
     # phi_rad is the asimutal velocity 
@@ -39,7 +39,13 @@ def Velocity_devider (Velocity, y,theta_rad,phi_rad):
     vy = V_tot*np.cos(theta_rad)*np.cos(phi_rad)
     vz = V_tot*np.sin(theta_rad)
     
-    V_vec = np.array([vx,vy,vz])
+    V_vec = []
+    for i in range(len(vz)):
+        V_vec.append([vx[i],vy[i],vz[i]])
+    
+    V_vec = np.array(V_vec)
+    if V_vec.shape[0] == 1:
+        V_vec = V_vec[0]
     return V_vec
 
     

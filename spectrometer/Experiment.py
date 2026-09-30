@@ -4,7 +4,9 @@ import numpy as np
 def MeV2m0s(q_eng_J, m_kg):
     
     c_m0s = 299792458
-    v0_m0s = c_m0s*np.sqrt ( 1 - ( m_kg*c_m0s**2 / (q_eng_J + m_kg*c_m0s**2) )**2 )# [m/s]
+    ratio = q_eng_J/np.linalg.norm(q_eng_J) 
+    v0_m0s = c_m0s*np.sqrt ( 1 - ( m_kg*c_m0s**2 / (np.linalg.norm(q_eng_J) + m_kg*c_m0s**2) )**2 )# [m/s]
+    v0_m0s = v0_m0s * ratio
     return v0_m0s
 
 def vel2gamma (v_m0s):
@@ -58,7 +60,7 @@ class Experiment():
         self.s_m = self.shield_mm*1e-3
         self.pinhole_rad_m = self.pinhole_dia_mm*1e-3 /2
         self.R0_m = np.array(self.R0_mm)*1e-3
-        self.q_eng_J = abs(self.q_eng_MeV)*1e6 * 1.602*1e-19
+        self.q_eng_J = self.q_eng_MeV*1e6 * 1.602*1e-19
         self.v0_m0s =  MeV2m0s(self.q_eng_J, self.m_kg)
         
         

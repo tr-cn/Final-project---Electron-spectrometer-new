@@ -27,7 +27,7 @@ class Spectrometer_Budy():
         yoke = self.yoke; shiled = self.shiled;
         
         pinhole_radius_mm = pinhole_dia_mm/2
-        fig = plt.figure()
+        fig = plt.figure(111)
         
         # manager = plt.get_current_fig_manager()
         # try:
@@ -39,6 +39,16 @@ class Spectrometer_Budy():
         #         manager.resize(*manager.window.maxsize())
         #     except Exception:
         #         pass
+        # ax = fig.add_subplot(111, projection='3d')
+        
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
+    
         ax = fig.add_subplot(111, projection='3d')
         
     
@@ -101,8 +111,8 @@ class Spectrometer_Budy():
     
     
     
-        lable_fontsize = 30
-        tic_fontsize = 25
+        lable_fontsize = 25
+        tic_fontsize = 18
         padding_distance = 25
         ax.set_xlabel('Width (mm)',fontsize = lable_fontsize, labelpad=padding_distance); 
         ax.set_ylabel('Depth (mm)',fontsize = lable_fontsize,labelpad=padding_distance)
@@ -117,11 +127,23 @@ class Spectrometer_Budy():
         ax.zaxis.set_major_formatter(FormatStrFormatter('%g'))
         
         ax.tick_params(axis='both', labelsize = tic_fontsize,  )
+        
+        
+ 
     
         ax.view_init(elev=15, azim=335)
         # ax.view_init(elev=90, azim=0)
         ax.dist = 9
         #plt.show()
+        
+        pos = ax.get_position()
+        
+        # pos_new = pos; pos_new.X0= 0.0;
+        pos.x0 = -0.2
+        ax.set_position(pos) #([0.1, 0.05, 0.55, 0.9])
+        # ax.set_position.X0
+        # 
+        
         self.fig = fig
         self.ax = ax
         
