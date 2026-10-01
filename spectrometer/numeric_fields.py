@@ -239,9 +239,29 @@ class Potential:
         return self.potential 
     
     def _show_potential(self):
-        fig = plt.imshow(self.potential)
-        plt.show(fig)
+        fig = plt.figure()  
+        ax = fig.add_subplot(111)
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
             
+        plt.pcolormesh(self.y*1e3, self.x*1e3, self.potential.T, shading='auto', cmap='viridis')
+        cb = plt.colorbar(label=r'$\psi$ [T$\cdot$m]')
+        cb.set_label(label=r'A.U', fontsize=25) 
+        cb.ax.tick_params(labelsize=18)
+
+        plt.xlabel('y [mm]',fontsize=25)
+        plt.ylabel('x [mm]',fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=18)
+        # plt.title
+        ax.set_title('scalar potential',fontsize = 28)
+        plt.gca().set_aspect('equal')
+        plt.show()
 
 class MagneticPotential(Potential):
     
@@ -256,7 +276,7 @@ class MagneticPotential(Potential):
         self.pole_y_start_m = pole_y_start_mm * 1e-3
         self.pole_y_end_m = pole_y_end_mm * 1e-3
 
-        self.mu0 =1 # 4.0 * np.pi * 1e-7
+        self.mu0 = 4.0 * np.pi * 1e-7
         self.delta_psi = self.B0_T * self.gap_m / self.mu0
 
 
@@ -277,6 +297,32 @@ class MagneticPotential(Potential):
     def _solve_potential (self):
         potential_0 = self._potential_init()
         self.potential   = self._laplace_func(potential_0) * self.delta_psi
+        
+        
+    def _show_potential(self):
+        fig = plt.figure()  
+        ax = fig.add_subplot(111)
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
+            
+        plt.pcolormesh(self.y*1e3, self.x*1e3, self.potential.T, shading='auto', cmap='viridis')
+        cb = plt.colorbar(label=r'$\psi$ [T$\cdot$m]')
+        cb.set_label(label=r'$\psi$ [A]', fontsize=25) 
+        cb.ax.tick_params(labelsize=18)
+
+        plt.xlabel('y [mm]',fontsize=25)
+        plt.ylabel('x [mm]',fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=18)
+        # plt.title
+        ax.set_title('Magnetic scalar potential',fontsize = 28)
+        plt.gca().set_aspect('equal')
+        plt.show()
 
     
 class ElectricPotential(Potential):
@@ -310,6 +356,32 @@ class ElectricPotential(Potential):
     def _solve_potential (self):
         potential_0 = self._potential_init()
         self.potential   = self._laplace_func(potential_0) * self.voltage
+        
+        
+    def _show_potential(self):
+        fig = plt.figure()  
+        ax = fig.add_subplot(111)
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
+            
+        plt.pcolormesh(self.y*1e3, self.x*1e3, self.potential.T, shading='auto', cmap='viridis')
+        cb = plt.colorbar()
+        cb.set_label(label=r'$\phi$ [V]', fontsize=25) 
+        cb.ax.tick_params(labelsize=18)
+
+        plt.xlabel('y [mm]',fontsize=25)
+        plt.ylabel('x [mm]',fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=18)
+        # plt.title
+        ax.set_title('Electric potential',fontsize = 28)
+        plt.gca().set_aspect('equal')
+        plt.show()
             
 class MagneticField:
     def __init__(self, potential_object):
@@ -318,7 +390,7 @@ class MagneticField:
         self.x = potential_object.x
         self.dy = potential_object.dy
         self.dx = potential_object.dx
-        self.mu0 = 1 #4.0 * np.pi * 1e-7
+        self.mu0 = 4.0 * np.pi * 1e-7
         self.By = None
         self.Bx = None
 
@@ -355,8 +427,16 @@ class MagneticField:
         # Show fewer arrows, otherwise the plot is cluttered
         skip = 2
         
-        plt.figure(figsize=(10, 5))
-        
+        fig = plt.figure()  
+        ax = fig.add_subplot(111)
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
+            
         plt.pcolormesh(
             self.y_half * 1e3,
             self.x_half * 1e3,
@@ -365,8 +445,9 @@ class MagneticField:
             cmap="viridis",
         )
         
-        plt.colorbar(label=r"$|\mathbf{B}|$ [T]")
-        
+        cb = plt.colorbar()
+        cb.set_label(label=r"$|\mathbf{B}|$ [T]", fontsize=25)
+        cb.ax.tick_params(labelsize=18)
         plt.streamplot(
             self.y_half * 1e3,
             self.x_half * 1e3,
@@ -378,11 +459,17 @@ class MagneticField:
             arrowsize=1.2,
         )
         
-        plt.xlabel("y [mm]")
-        plt.ylabel("x [mm]")
-        plt.title("Magnetic-field lines")
+        plt.xlabel("y [mm]",fontsize=25)
+        plt.ylabel("x [mm]",fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=18)
+        ax.set_title('Magnetic field magnitude and direction',fontsize = 28)
         plt.gca().set_aspect("equal")
         plt.show()
+        
+
+
+        
     
     def _get_magnetic_field(self,R_current_m):
         
@@ -461,25 +548,39 @@ class ElectricField:
         Ey =  self.Ey; Ex = self.Ex;
         phi = self.potential_object.potential
         E_magnitude = self.E_magnitude
-        plt.figure(figsize=(10, 5))
+        fig = plt.figure()  
+        ax = fig.add_subplot(111)
+        manager = plt.get_current_fig_manager()
+        try:
+            window = manager.window
+         
+            window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+        except Exception as e:
+            print("Could not resize window:", e)
+            
+            
         Y, X = np.meshgrid(self.y_half,  self.x_half, indexing="ij")
         skip = 2
         # Background: field magnitude
         plt.pcolormesh(self.y_half * 1e3, self.x_half * 1e3, E_magnitude.T, 
                        shading="auto", cmap="viridis",)
         
-        plt.colorbar(label=r"$|\mathbf{E}|$ [V/m]")
+        cb = plt.colorbar()
+        cb.set_label(label=r"$|\mathbf{E}|$ [V/m]", fontsize=25)
+        cb.ax.tick_params(labelsize=18)
         
         # Arrows: By is horizontal, Bx is vertical
         plt.streamplot( self.y_half * 1e3, self.x_half * 1e3, self.Ey_center.T, self.Ex_center.T, density=1.5,
             color="white", linewidth=0.8, arrowsize=1.2)
         
-        plt.xlabel("y [mm]")
-        plt.ylabel("x [mm]")
-        plt.title("Electric field magnitude and direction")
+        plt.xlabel("y [mm]",fontsize=25)
+        plt.ylabel("x [mm]",fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=18)
+        ax.set_title("Electric field magnitude and direction",fontsize = 28)
         plt.gca().set_aspect("equal")
         plt.show()
-        
+
     def _get_electric_field(self,R_current_m):
         
         x_c = R_current_m[0]

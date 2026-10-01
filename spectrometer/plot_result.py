@@ -11,12 +11,12 @@ plt.rcParams.update({
 from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
 
-def trajectory_plot (ax, R_vec_mm,lable = None):
+def trajectory_plot (ax, R_vec_mm,label = None):
     
     
     R_vec_mm = np.array(R_vec_mm)
     x_vec_mm = R_vec_mm[:,0]; y_vec_mm = R_vec_mm[:,1]; z_vec_mm = R_vec_mm[:,2];
-    ax.plot(x_vec_mm, y_vec_mm, z_vec_mm,linewidth = 3, label = lable+" MeV")
+    ax.plot(x_vec_mm, y_vec_mm, z_vec_mm,linewidth = 3, label = label+" MeV")
 
     
     return 

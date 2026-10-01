@@ -92,7 +92,6 @@ class Integrators():
         
     def _update_params(self,params):
         self.__dict__.update(params)
-        self._update_solution(self.solution)
         self.params = params
         
         
@@ -141,11 +140,11 @@ class Integrators():
 
 
     
-    def _is_in_spectrometer(self,R_current_m):#, h_m, d_m, w_m, shield_mm, pinhole_dia_mm):
+    def _is_in_spectrometer(self,R_current_m,R_prev_m):#, h_m, d_m, w_m, shield_mm, pinhole_dia_mm):
         
         if  R_current_m[1]<=0:
             
-            return abs(R_current_m[2]) < self.pinhole_rad_m  and abs(R_current_m[0]) < self.pinhole_rad_m
+            return abs(R_current_m[2]) < self.pinhole_rad_m  and abs(R_current_m[0]) < self.pinhole_rad_m and R_current_m[1]>R_prev_m[1]
         
         return abs(R_current_m[2]) < self.h_m and R_current_m[1] < self.d_m and abs(R_current_m[0]) < abs (self.w_m)
     
@@ -202,7 +201,73 @@ class Integrators():
                    E_p = np.array([0,0,0])
                return E_p
            
-            
+    def _hermite_exit_crossing(self, R_m, v_ms):
+        """
+        גרסת Hermite המתואמת ל-API של _exect_exist: אותם ארגומנטים (R_m, v_ms --
+        וקטורים שלמים, לא זוג-נקודות בודד), אותם 3 ערכים מוחזרים
+        (R_exit_m, v_exit_m0s, gamma_exit -- לא t_frac).
+    
+        בניגוד ל-_exect_exist (אינטרפולציה ליניארית), כאן משתמשים בפולינום
+        הרמיט מעוקב (cubic Hermite) על הקואורדינטה שחצתה את הגבול,
+        תוך שימוש בנגזרת (מהירות) בשתי הנקודות -- התאמה חלקה יותר.
+        """
+        R0, R1 = self.R_vec_m[-2], self.R_vec_m[-1]
+        v0, v1 = v_ms[-2], v_ms[-1]
+        dt = self.dt_s
+    
+        # קביעת איזו קואורדינטה (0=x, 1=y, 2=z) ואיזה גבול נחצה -- כמו ב-_exect_exist
+        if R1[2] > self.h_m:
+            axis, target = 2, self.h_m
+        elif R1[2] < -self.h_m:
+            axis, target = 2, -self.h_m
+        elif R1[0] > self.w_m:
+            axis, target = 0, self.w_m
+        elif R1[0] < -self.w_m:
+            axis, target = 0, -self.w_m
+        elif R1[1] > self.d_m:
+            axis, target = 1, self.d_m
+        elif R1[1] < 0:
+            axis, target = 1, 0.0
+        else:
+            axis, target = None, None
+    
+        if axis is None:
+            R_exit_m = R1.copy() if hasattr(R1, "copy") else np.array(R1, dtype=float)
+            v_exit_m0s = v1.copy() if hasattr(v1, "copy") else np.array(v1, dtype=float)
+            gamma_exit = vel2gamma(v_exit_m0s)
+            return R_exit_m, v_exit_m0s, gamma_exit
+    
+        p0, p1 = R0[axis], R1[axis]
+        m0, m1 = v0[axis]*dt, v1[axis]*dt
+    
+        def h_basis(t):
+            h00 = 2*t**3 - 3*t**2 + 1
+            h10 = t**3 - 2*t**2 + t
+            h01 = -2*t**3 + 3*t**2
+            h11 = t**3 - t**2
+            return h00, h10, h01, h11
+    
+        def p_of_t(t):
+            h00, h10, h01, h11 = h_basis(t)
+            return h00*p0 + h10*m0 + h01*p1 + h11*m1
+    
+        lo, hi = 0.0, 1.0
+        f_lo = p_of_t(lo) - target
+        for _ in range(50):
+            mid = (lo+hi)/2
+            f_mid = p_of_t(mid) - target
+            if np.sign(f_mid) == np.sign(f_lo):
+                lo, f_lo = mid, f_mid
+            else:
+                hi = mid
+        t_frac = (lo+hi)/2
+    
+        h00, h10, h01, h11 = h_basis(t_frac)
+        R_exit_m = h00*R0 + h10*(v0*dt) + h01*R1 + h11*(v1*dt)
+        v_exit_m0s = v0 + t_frac*(v1 - v0)
+        gamma_exit = vel2gamma(v_exit_m0s)
+    
+        return R_exit_m, v_exit_m0s, gamma_exit
            
     def _exect_exist(self,R_m,v_ms):
         frac =0 # for non entry situation
@@ -223,8 +288,9 @@ class Integrators():
             frac = (self.d_m - R_m[-2][1]) / (R_m[-1][1] - R_m[-2][1])  
         
         elif (R_m[-1][1])<0:
-            frac = (0 - abs(R_m[-2][1]) / (R_m[-1][1]) - abs(R_m[-2][1]))   
+            frac = (0 - R_m[-2][1]) / (R_m[-1][1] - R_m[-2][1])   
             
+       
         v_minus2 = v_ms[-2]
         v_minus1 = v_ms[-1]
         
@@ -241,13 +307,20 @@ class Integrators():
         v_exit_m0s = dir_exit * mag_exit
         gamma_exit = vel2gamma(v_exit_m0s)
         
-        
+        # print(f"frac={frac:.4f}, |v_minus2|={mag_minus2:.4e}, |v_minus1|={mag_minus1:.4e}")
         
         
         return R_exit_m, v_exit_m0s, gamma_exit
 
         
-        
+    def _clipper(self,R_m)  :
+        R_clamped = np.array(R_m, dtype=float).copy()
+        R_clamped[0] = np.clip(R_clamped[0], -self.w_m, self.w_m)
+        # R_clamped[1] = np.clip(R_clamped[1], 0, self.d_m)
+        R_clamped[2] = np.clip(R_clamped[2], -self.h_m, self.h_m)
+        return R_clamped
+            
+            
         
         
         
@@ -266,7 +339,8 @@ class Integrators():
         # dt_s = T_cyclotron/steps
         
         dt_s = self.dt_s
-        while self._is_in_spectrometer(R_current_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
             
             B_T = self._get_magnetic_field(R_current_m);
             # print(R_current_m)
@@ -290,6 +364,8 @@ class Integrators():
             self.R_vec_m.append(R_current_m)
             self.gamma_vec.append(gamma_current)
             
+            R_prev_m = self.R_vec_m[-2]
+            
         
         # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
         
@@ -301,6 +377,8 @@ class Integrators():
         # self.v_vec_m0s[-1] = v_exit_m0s
         # self.gamma_vec[-1] = gamma_exit
         self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
+        
+        # print(f"N_steps={self.N_steps}, actual_steps={len(self.R_vec_m)}")
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
         
@@ -318,7 +396,8 @@ class Integrators():
         # dt_s = T_cyclotron/steps
         
         dt_s = self.dt_s
-        while self._is_in_spectrometer(R_current_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
             
             B_T = self._get_magnetic_field(R_current_m);
             # print(R_current_m)
@@ -341,7 +420,8 @@ class Integrators():
             v_m0s_m = v_m0s_i + k1_v; 
             gamma_m = vel2gamma(v_m0s_m)
             R_m_m = R_m_i + k1_r; # not realy neaded
-            
+            R_m_m = self._clipper(R_m_m)
+           
             B_T_m =B_T = self._get_magnetic_field(R_m_m);
             E_Vm_m = self._get_electric_field(R_m_m)
             
@@ -362,6 +442,8 @@ class Integrators():
             self.R_vec_m.append(R_current_m)
             self.gamma_vec.append(gamma_current)
             
+            R_prev_m = self.R_vec_m[-2]
+            
         # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
         
         # R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
@@ -372,11 +454,13 @@ class Integrators():
         # self.v_vec_m0s[-1] = v_exit_m0s
         # self.gamma_vec[-1] = gamma_exit
         self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
+        # self.R_vec_m[-1], self.v_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_vec_m0s[-2], self.v_vec_m0s[-1], self.dt_s, self.h_m)
+        # print(f"N_steps={self.N_steps}, actual_steps={len(self.R_vec_m)}")
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
         
 
-    def _RK4 (self):
+    def _RK4_Linear (self):
         R_current_m = self.R0_m#np.copy(self.R0_m)
         gamma_current = self.gamma0#np.copy(self.gamma0)
         v_current_m0s = self.v0_m0s#np.copy(self.v0_m0s)
@@ -389,7 +473,8 @@ class Integrators():
         # dt_s = T_cyclotron/steps
         
         dt_s = self.dt_s
-        while self._is_in_spectrometer(R_current_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
             
             B_T = self._get_magnetic_field(R_current_m);
             # print(R_current_m)
@@ -462,22 +547,113 @@ class Integrators():
             self.R_vec_m.append(R_current_m)
             self.gamma_vec.append(gamma_current)
             
-        # frac = (self.h_m - abs(self.R_vec_m[-2][2])) / (abs(self.R_vec_m[-1][2]) - abs(self.R_vec_m[-2][2]))
-        
-        # R_exit_m = self.R_vec_m[-2] + frac * (self.R_vec_m[-1] - self.R_vec_m[-2])
-        # v_exit_m0s =  self.v_vec_m0s[-2] + frac * ( self.v_vec_m0s[-1] -  self.v_vec_m0s[-2])
-        # gamma_exit = vel2gamma(v_exit_m0s)
-        
-        # self.R_vec_m[-1] = R_exit_m
-        # self.v_vec_m0s[-1] = v_exit_m0s
-        # self.gamma_vec[-1] = gamma_exit
-        
+            R_prev_m = self.R_vec_m[-2]
+
         self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
+        # self.R_vec_m[-1], self.v_vec_m0s[-1], self.gamma_vec[-1] = self._hermite_exit_crossing(self.R_vec_m, self.v_vec_m0s)
+        # self.R_vec_m[-1], self.v_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_vec_m0s[-2], self.v_vec_m0s[-1], self.dt_s, self.h_m)
+        # print(f"N_steps={self.N_steps}, actual_steps={len(self.R_vec_m)}")
+        self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
+        
+        return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
+
+    def _RK4_Hermit (self):
+        R_current_m = self.R0_m#np.copy(self.R0_m)
+        gamma_current = self.gamma0#np.copy(self.gamma0)
+        v_current_m0s = self.v0_m0s#np.copy(self.v0_m0s)
+        
+        self.v_vec_m0s = list([]); self.gamma_vec = list([]); self.R_vec_m = list([]); 
+        self.v_vec_m0s.append(v_current_m0s); self.gamma_vec.append(gamma_current); self.R_vec_m.append(R_current_m);
+        
+        #CFL = 0.00000001; dx_m = 1e-4; dt_s = dx_m*CFL; # not realy neaded in euler
+        # T_cyclotron = ( abs(q_C)*np.linalg.norm(B_T)/(np.pi*gamma*m_kg) )**-1
+        # dt_s = T_cyclotron/steps
+        
+        dt_s = self.dt_s
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+            
+            B_T = self._get_magnetic_field(R_current_m);
+            # print(R_current_m)
+            # print(B_T)
+            # print('')
+            E_Vm = self._get_electric_field(R_current_m)
+            
+          
+            v_m0s_i = v_current_m0s
+            gamma_i = gamma_current
+            R_m_i =  R_current_m 
+            
+            dv_dt_m0s2_i = get_lorentz_acceleration(self.q_C,gamma_i,self.m_kg,E_Vm,v_m0s_i,B_T)
+            dr_dt_m0s_i = v_m0s_i;
+            
+            k1_v = dv_dt_m0s2_i*dt_s
+            k1_r = dr_dt_m0s_i*dt_s
+            
+                    
+            v_m0s_m1 = v_m0s_i + k1_v/2; 
+            gamma_m1= vel2gamma(v_m0s_m1)
+            R_m_m1 = R_m_i + k1_r/2; # not realy neaded
+            
+            B_T_m1 = self._get_magnetic_field(R_m_m1)
+            E_Vm_m1 = self._get_electric_field(R_m_m1)
+            
+            dv_dt_m0s2_m1 = get_lorentz_acceleration(self.q_C,gamma_m1,self.m_kg,E_Vm_m1,v_m0s_m1,B_T_m1)
+            dr_dt_m0s_m1 = v_m0s_m1;        
+                 
+            
+            k2_v = dv_dt_m0s2_m1*dt_s
+            k2_r = dr_dt_m0s_m1*dt_s
+            
+            v_m0s_m2 = v_m0s_i + k2_v/2; 
+            gamma_m2= vel2gamma(v_m0s_m2)
+            R_m_m2 = R_m_i + k2_r/2; # not realy neaded
+            
+            B_T_m2 = self._get_magnetic_field(R_m_m2);
+            E_Vm_m2 = self._get_electric_field(R_m_m2)
+            
+            
+            dv_dt_m0s2_m2 = get_lorentz_acceleration(self.q_C,gamma_m2,self.m_kg,E_Vm_m2,v_m0s_m2,B_T_m2)
+            dr_dt_m0s_m2 = v_m0s_m2;   
+            
+            
+            k3_v = dv_dt_m0s2_m2*dt_s
+            k3_r = dr_dt_m0s_m2*dt_s
+            
+            
+            v_m0s_m3 = v_m0s_i + k3_v; 
+            gamma_m3= vel2gamma(v_m0s_m3)
+            R_m_m3 = R_m_i + k3_r; # not realy neaded
+            
+            B_T_m3 = self._get_magnetic_field(R_m_m3)
+            E_Vm_m3 = self._get_electric_field(R_m_m3)
+            
+            dv_dt_m0s2_m3 = get_lorentz_acceleration(self.q_C,gamma_m3,self.m_kg,E_Vm_m3,v_m0s_m3,B_T_m3)
+            dr_dt_m0s_m3 = v_m0s_m3;  
+            
+            k4_v = dv_dt_m0s2_m3*dt_s
+            k4_r = dr_dt_m0s_m3*dt_s 
+            
+            
+            v_current_m0s = v_m0s_i + 1/6 * (k1_v + 2*k2_v + 2*k3_v + k4_v)
+            R_current_m = (R_m_i + 1/6 * (k1_r + 2*k2_r + 2*k3_r + k4_r))
+            gamma_current = vel2gamma(v_current_m0s)
+            
+            
+            self.v_vec_m0s.append(v_current_m0s)
+            self.R_vec_m.append(R_current_m)
+            self.gamma_vec.append(gamma_current)
+            
+            R_prev_m = self.R_vec_m[-2]
+
+        # self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
+        self.R_vec_m[-1], self.v_vec_m0s[-1], self.gamma_vec[-1] = self._hermite_exit_crossing(self.R_vec_m, self.v_vec_m0s)
+        # self.R_vec_m[-1], self.v_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_vec_m0s[-2], self.v_vec_m0s[-1], self.dt_s, self.h_m)
+        # print(f"N_steps={self.N_steps}, actual_steps={len(self.R_vec_m)}")
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         
         return self.R_vec_mm,self.v_vec_m0s,self.gamma_vec
             
-
     def _Boris_pusher (self):
         dt_s = self.dt_s
         
@@ -495,8 +671,13 @@ class Integrators():
         self.v_minus_half_vec_m0s = list([]); self.gamma_vec = list([]); self.R_vec_m = list([]); 
         self.v_minus_half_vec_m0s.append(v_current_m0s); self.gamma_vec.append(gamma_current); self.R_vec_m.append(R_current_m);
 
-    
-        while self._is_in_spectrometer(R_current_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+        count = 0
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+            count +=1
+            # if count%11681 == 0:
+            #     print (count)
+            #     print (R_current_m)
             B_T = self._get_magnetic_field(R_current_m);
             # print(R_current_m)
             # print(B_T)
@@ -527,17 +708,82 @@ class Integrators():
     
             self.v_minus_half_vec_m0s.append(v_current_m0s)
             self.R_vec_m.append(R_current_m)
-            
-            
             self.gamma_vec.append(gamma_current)
+            
+            R_prev_m = self.R_vec_m[-2]
             
             
         self.R_vec_m[-1], self.v_minus_half_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_minus_half_vec_m0s)
+        # self.R_vec_m[-1], self.v_minus_half_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_minus_half_vec_m0s[-2], self.v_minus_half_vec_m0s[-1], self.dt_s, self.h_m)
         
-        
+
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         return self.R_vec_mm,self.v_minus_half_vec_m0s,self.gamma_vec
         
+    
+    def _Collocated_Boris_pusher (self): # https://arxiv.org/pdf/2607.12272
+        dt_s = self.dt_s
+        
+        R_current_m = self.R0_m
+        
+        # B_T = self._get_magnetic_field(R_current_m);
+        E_Vm = self._get_electric_field(R_current_m)
+        dv_dt_0_m0s2 = get_electric_acceleration(self.q_C,self.gamma0,self.m_kg,E_Vm,self.v0_m0s,B_T=None)
+        
+        v_minus_half_m0s = self.v0_m0s - 1/2 * dv_dt_0_m0s2 * dt_s
+        
+        R_current_m = self.R0_m#np.copy(self.R0_m)
+        gamma_current = self.gamma0#np.copy(self.gamma0)
+        v_current_m0s = v_minus_half_m0s
+        
+        self.v_minus_half_vec_m0s = list([]); self.gamma_vec = list([]); self.R_vec_m = list([]); 
+        self.v_minus_half_vec_m0s.append(v_current_m0s); self.gamma_vec.append(gamma_current); self.R_vec_m.append(R_current_m);
+
+        count = 0
+        R_prev_m = np.array([-np.inf,-np.inf,-np.inf])
+        while self._is_in_spectrometer(R_current_m,R_prev_m):#, self.h_m, self.d_m, self.w_m, self.shield_mm, self.pinhole_dia_mm):
+            count +=1
+            R_star_m = R_current_m + 0.5*dt_s*v_current_m0s
+            v_prev = v_current_m0s
+            B_T_star = self._get_magnetic_field(R_star_m);
+
+            E_Vm_i_star = self._get_electric_field(R_star_m)# change it
+            
+            v_minus_half_m0s = v_current_m0s
+            gamma_i = gamma_current
+            R_m_i = R_current_m 
+            
+            dv1_m0s= get_electric_acceleration(self.q_C,gamma_i,self.m_kg,E_Vm_i_star,v_minus_half_m0s,B_T=None) * dt_s/2
+            v1_m0s = v_minus_half_m0s + dv1_m0s 
+            gamma_m1 =  vel2gamma(v1_m0s)
+            # R_m_m1 = R_m_i + dv1_m0s*dt_s/2
+
+            
+            
+           
+            
+            v2_m0s  = get_magnetic_rotation(self.q_C,gamma_m1,self.m_kg,E_Vm_i_star,v1_m0s,B_T_star,dt_s)
+            gamma_m2 =  vel2gamma(v2_m0s)
+            
+            
+            v_current_m0s = v2_m0s + get_electric_acceleration(self.q_C,gamma_m2,self.m_kg,E_Vm_i_star,v2_m0s,B_T=None)*dt_s/2
+            R_current_m = (R_m_i + 0.5*(v_current_m0s + v_prev)*dt_s)
+            gamma_current = vel2gamma(v_current_m0s)
+            
+    
+            self.v_minus_half_vec_m0s.append(v_current_m0s)
+            self.R_vec_m.append(R_current_m)
+            self.gamma_vec.append(gamma_current)
+            
+            R_prev_m = self.R_vec_m[-2]
+            
+            
+        self.R_vec_m[-1], self.v_minus_half_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_minus_half_vec_m0s)
+        # self.R_vec_m[-1], self.v_minus_half_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_minus_half_vec_m0s[-2], self.v_minus_half_vec_m0s[-1], self.dt_s, self.h_m)
+        
+
+        self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
+        return self.R_vec_mm,self.v_minus_half_vec_m0s,self.gamma_vec
 
 
 
