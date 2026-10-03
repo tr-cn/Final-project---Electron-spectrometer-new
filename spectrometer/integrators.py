@@ -77,7 +77,7 @@ class Integrators():
                                     pole_y_start_mm=0, pole_y_end_mm=self.depth_mm)
             self.psi._solve_potential()
             
-            self.mag = MagneticField(self.psi)
+            self.mag = MagneticField(self.psi, self.grid_interpulation)
             self.mag._solve_field()
             
             
@@ -85,7 +85,7 @@ class Integrators():
                 self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm,
                                        electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
                 self.phi._solve_potential()
-                self.Ele = ElectricField(self.phi)
+                self.Ele = ElectricField(self.phi, self.grid_interpulation)
                 self.Ele._solve_field()
                 
 
@@ -113,7 +113,7 @@ class Integrators():
                                     pole_y_start_mm=0, pole_y_end_mm=self.depth_mm)
             self.psi._solve_potential()
             
-            self.mag = MagneticField(self.psi)
+            self.mag = MagneticField(self.psi,self.grid_interpulation)
             self.mag._solve_field()
             
             
@@ -121,7 +121,7 @@ class Integrators():
                 self.phi = ElectricPotential(Ny=self.Ny_p, Nx=self.Nx_p, exp_range_Y_mm=self.exp_range_Y_mm, exp_range_X_mm=self.exp_range_X_mm, Ex0_Vm=self.Ex0_Vm,
                                        electrode_y_start_mm=0, electrode_y_end_mm=self.depth_mm) 
                 self.phi._solve_potential()
-                self.Ele = ElectricField(self.phi)
+                self.Ele = ElectricField(self.phi,self.grid_interpulation)
                 self.Ele._solve_field()
 
     def _analitic_sol_vel2dist (self):
@@ -133,10 +133,14 @@ class Integrators():
         # R_mm = R_m *1e3
         signs = np.sign(R_m) 
         
-        R_m = abs(R_m)
-        Y_mm = np.sqrt ( 2*R_m[1]*self.h_m - self.h_m**2 )*1e3 #* signs[1]
+        R_m = abs(R_m[1])
+        h = self.h_m - self.R0_m[2]
+        Y_mm = np.sqrt ( 2*R_m*h - h**2 )*1e3 
+        theta = np.arccos( (R_m-h)/ R_m)
+        tau = theta*self.m_kg/(self.q_C*self.Bx0_T)
         
-        return Y_mm
+        X_mm = (self.R0_m[0] + self.gamma0*self.v0_m0s[0]*tau + self.Ex0_Vm*self.q_C/(2*self.m_kg)*tau**2)*1e3
+        return X_mm, Y_mm
 
 
     
@@ -203,85 +207,174 @@ class Integrators():
            
     def _hermite_exit_crossing(self, R_m, v_ms):
         """
-        גרסת Hermite המתואמת ל-API של _exect_exist: אותם ארגומנטים (R_m, v_ms --
-        וקטורים שלמים, לא זוג-נקודות בודד), אותם 3 ערכים מוחזרים
-        (R_exit_m, v_exit_m0s, gamma_exit -- לא t_frac).
+        Hermite cubic interpolation to the spectrometer boundary.
     
-        בניגוד ל-_exect_exist (אינטרפולציה ליניארית), כאן משתמשים בפולינום
-        הרמיט מעוקב (cubic Hermite) על הקואורדינטה שחצתה את הגבול,
-        תוך שימוש בנגזרת (מהירות) בשתי הנקודות -- התאמה חלקה יותר.
+        Input:
+            R_m  : list/array of particle positions [m]
+            v_ms : list/array of particle velocities [m/s]
+    
+        Returns:
+            R_exit_m    : exit position [m]
+            v_exit_m0s  : exit velocity [m/s]
+            gamma_exit  : Lorentz gamma at the exit
         """
-        R0, R1 = self.R_vec_m[-2], self.R_vec_m[-1]
-        v0, v1 = v_ms[-2], v_ms[-1]
+    
+        # Two endpoints of the final integration step
+        R0 = np.asarray(R_m[-2], dtype=float)
+        R1 = np.asarray(R_m[-1], dtype=float)
+    
+        v0 = np.asarray(v_ms[-2], dtype=float)
+        v1 = np.asarray(v_ms[-1], dtype=float)
+    
         dt = self.dt_s
+        
+        z_limit= self.pinhole_rad_m if R1[1]<= 0 else self.h_m
+        x_limit= self.pinhole_rad_m if R1[1]<= 0 else self.w_m
     
-        # קביעת איזו קואורדינטה (0=x, 1=y, 2=z) ואיזה גבול נחצה -- כמו ב-_exect_exist
-        if R1[2] > self.h_m:
-            axis, target = 2, self.h_m
-        elif R1[2] < -self.h_m:
-            axis, target = 2, -self.h_m
-        elif R1[0] > self.w_m:
-            axis, target = 0, self.w_m
-        elif R1[0] < -self.w_m:
-            axis, target = 0, -self.w_m
+        # Determine which physical boundary was crossed
+        if R1[2] > z_limit:
+            axis = 2
+            target = z_limit
+    
+        elif R1[2] < -z_limit:
+            axis = 2
+            target = -z_limit
+    
+        elif R1[0] > x_limit:
+            axis = 0
+            target = x_limit
+    
+        elif R1[0] < -x_limit:
+            axis = 0
+            target = -x_limit
+    
         elif R1[1] > self.d_m:
-            axis, target = 1, self.d_m
-        elif R1[1] < 0:
-            axis, target = 1, 0.0
-        else:
-            axis, target = None, None
+            axis = 1
+            target = self.d_m
     
-        if axis is None:
-            R_exit_m = R1.copy() if hasattr(R1, "copy") else np.array(R1, dtype=float)
-            v_exit_m0s = v1.copy() if hasattr(v1, "copy") else np.array(v1, dtype=float)
+        elif R1[1] < 0.0:
+            axis = 1
+            target = 0.0
+    
+        else:
+            # No boundary crossing: return the final ordinary RK4 point
+            R_exit_m = R1.copy()
+            v_exit_m0s = v1.copy()
             gamma_exit = vel2gamma(v_exit_m0s)
+    
             return R_exit_m, v_exit_m0s, gamma_exit
     
-        p0, p1 = R0[axis], R1[axis]
-        m0, m1 = v0[axis]*dt, v1[axis]*dt
+        # Scalar Hermite polynomial of the coordinate that crosses the boundary
+        p0 = R0[axis]
+        p1 = R1[axis]
     
-        def h_basis(t):
-            h00 = 2*t**3 - 3*t**2 + 1
-            h10 = t**3 - 2*t**2 + t
-            h01 = -2*t**3 + 3*t**2
-            h11 = t**3 - t**2
+        # Tangents with respect to normalized coordinate s in [0,1]
+        m0 = v0[axis] * dt
+        m1 = v1[axis] * dt
+    
+        def h_basis(s):
+            h00 = 2.0*s**3 - 3.0*s**2 + 1.0
+            h10 = s**3 - 2.0*s**2 + s
+            h01 = -2.0*s**3 + 3.0*s**2
+            h11 = s**3 - s**2
+    
             return h00, h10, h01, h11
     
-        def p_of_t(t):
-            h00, h10, h01, h11 = h_basis(t)
+        def crossing_coordinate(s):
+            h00, h10, h01, h11 = h_basis(s)
+    
             return h00*p0 + h10*m0 + h01*p1 + h11*m1
     
-        lo, hi = 0.0, 1.0
-        f_lo = p_of_t(lo) - target
-        for _ in range(50):
-            mid = (lo+hi)/2
-            f_mid = p_of_t(mid) - target
-            if np.sign(f_mid) == np.sign(f_lo):
-                lo, f_lo = mid, f_mid
-            else:
-                hi = mid
-        t_frac = (lo+hi)/2
+        # Solve R_axis(s) = target by bisection
+        lo = 0.0
+        hi = 1.0
     
+        f_lo = crossing_coordinate(lo) - target
+        f_hi = crossing_coordinate(hi) - target
+    
+        # Numerical safety: should not occur if this function is called only
+        # after the particle has crossed a boundary.
+        if f_lo * f_hi > 0.0:
+            frac = (target - p0) / (p1 - p0)
+            frac = np.clip(frac, 0.0, 1.0)
+            t_frac = frac
+    
+        else:
+            for _ in range(60):
+                mid = 0.5*(lo + hi)
+                f_mid = crossing_coordinate(mid) - target
+    
+                if f_lo * f_mid <= 0.0:
+                    hi = mid
+                else:
+                    lo = mid
+                    f_lo = f_mid
+    
+            t_frac = 0.5*(lo + hi)
+    
+        # Hermite position interpolation for the full vector R(s)
         h00, h10, h01, h11 = h_basis(t_frac)
-        R_exit_m = h00*R0 + h10*(v0*dt) + h01*R1 + h11*(v1*dt)
-        v_exit_m0s = v0 + t_frac*(v1 - v0)
+    
+        R_exit_m = (
+            h00 * R0
+            + h10 * (v0 * dt)
+            + h01 * R1
+            + h11 * (v1 * dt)
+        )
+    
+        # Derivative of the Hermite trajectory:
+        # v_H(s) = dR/dt = (1/dt) dR/ds
+        s = t_frac
+    
+        dh00 = 6.0*s**2 - 6.0*s
+        dh10 = 3.0*s**2 - 4.0*s + 1.0
+        dh01 = -6.0*s**2 + 6.0*s
+        dh11 = 3.0*s**2 - 2.0*s
+    
+        v_hermite_raw = (
+            (dh00 / dt) * R0
+            + dh10 * v0
+            + (dh01 / dt) * R1
+            + dh11 * v1
+        )
+    
+        # Keep the speed interpolation consistent with _exect_exist.
+        # In a magnetic-only run, |v0| and |v1| should be nearly equal.
+        mag0 = np.linalg.norm(v0)
+        mag1 = np.linalg.norm(v1)
+    
+        mag_exit = mag0 + t_frac*(mag1 - mag0)
+    
+        # Tangent direction from the Hermite curve
+        tangent_norm = np.linalg.norm(v_hermite_raw)
+    
+        if tangent_norm == 0.0:
+            # Extremely defensive fallback; normally never reached.
+            v_exit_m0s = v0 + t_frac*(v1 - v0)
+    
+        else:
+            dir_exit = v_hermite_raw / tangent_norm
+            v_exit_m0s = mag_exit * dir_exit
+    
         gamma_exit = vel2gamma(v_exit_m0s)
     
         return R_exit_m, v_exit_m0s, gamma_exit
            
     def _exect_exist(self,R_m,v_ms):
         frac =0 # for non entry situation
+        z_limit= self.pinhole_rad_m if R_m[-1][2]<= 0 else self.h_m
+        x_limit= self.pinhole_rad_m if R_m[-1][0]<= 0 else self.w_m
         
-        if (R_m[-1][2])>self.h_m:
-            frac = (self.h_m - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
+        if (R_m[-1][2])>z_limit:
+            frac = (z_limit - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
         
-        elif (R_m[-1][2])<-self.h_m:
-            frac = (-self.h_m - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
+        elif (R_m[-1][2])<-z_limit:
+            frac = (-z_limit - R_m[-2][2]) / ((R_m[-1][2]) - R_m[-2][2])
         
-        elif (R_m[-1][0])>self.w_m:
+        elif (R_m[-1][0])>x_limit:
             frac = (self.w_m - R_m[-2][0]) / (R_m[-1][0] - R_m[-2][0])  
         
-        elif R_m[-1][0]<-self.w_m:
+        elif R_m[-1][0]<-x_limit:
             frac = (-self.w_m - R_m[-2][0]) / (R_m[-1][0] - R_m[-2][0]) 
         
         elif (R_m[-1][1])>self.d_m:
@@ -420,7 +513,7 @@ class Integrators():
             v_m0s_m = v_m0s_i + k1_v; 
             gamma_m = vel2gamma(v_m0s_m)
             R_m_m = R_m_i + k1_r; # not realy neaded
-            R_m_m = self._clipper(R_m_m)
+            # R_m_m = self._clipper(R_m_m)
            
             B_T_m =B_T = self._get_magnetic_field(R_m_m);
             E_Vm_m = self._get_electric_field(R_m_m)
@@ -551,7 +644,7 @@ class Integrators():
 
         self.R_vec_m[-1], self.v_vec_m0s[-1] ,self.gamma_vec[-1]  = self._exect_exist(self.R_vec_m, self.v_vec_m0s)
         # self.R_vec_m[-1], self.v_vec_m0s[-1], self.gamma_vec[-1] = self._hermite_exit_crossing(self.R_vec_m, self.v_vec_m0s)
-        # self.R_vec_m[-1], self.v_vec_m0s[-1], frac =  self._hermite_exit_crossing(self.R_vec_m[-2], self.R_vec_m[-1], self.v_vec_m0s[-2], self.v_vec_m0s[-1], self.dt_s, self.h_m)
+        
         # print(f"N_steps={self.N_steps}, actual_steps={len(self.R_vec_m)}")
         self.R_vec_mm = [R_m*1e3 for R_m in self.R_vec_m]
         

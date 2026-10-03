@@ -34,6 +34,87 @@ def _log_scale_vectors(Fx, Fy, Fz, len_min=0.3, len_max=1.0, eps=1e2):
 
 
 
+def Fully_analitic(integrator, experiment, engs_vec_MeV,m_kg_vec,q_vec_C):
+   
+    integrator_loc = copy.deepcopy(integrator)
+    experiment_loc = copy.deepcopy(experiment)
+    
+    engs_vec_MeV = np.atleast_2d(engs_vec_MeV)
+    
+    m_kg_vec =  np.atleast_2d(m_kg_vec)
+    q_vec_C = np.atleast_2d(q_vec_C)
+    
+    
+    def  _Engergy_updater(integrator,experiment, engs_MeV, m_kg,q_C):
+
+        params = experiment.params
+        params["q_eng_MeV"] = engs_MeV
+        params["m_kg"] = m_kg
+        params["q_C"] = q_C
+        params = experiment._update_params(params)
+        integrator._update_params(params)
+        # print(integrator.m_kg)
+        # print(integrator.q_C)
+        x,y = integrator._analitic_sol_vel2dist()
+        # x = np.arra
+        return x,y
+    
+        
+    
+    x_mat_q_mm = list([])
+    y_mat_q_mm = list([])
+    
+    x_mat_mass_mm = list([])
+    y_mat_mass_mm = list([])
+    
+
+    for q in range(q_vec_C.shape[1]):
+        q_C = q_vec_C[0][q]
+        m_kg = m_kg_vec[0][q]
+        x_vec_eng_mm = np.zeros( len(engs_vec_MeV))
+        y_vec_eng_mm = np.zeros_like(x_vec_eng_mm)
+        for i in range(len(engs_vec_MeV)):
+            engs_MeV = engs_vec_MeV[i]
+            x_vec_eng_mm[i],y_vec_eng_mm[i] = _Engergy_updater(integrator_loc,experiment_loc, engs_MeV, m_kg,q_C)
+            # x_mat_mass_mm.append(x_vec_eng_mm)
+            # y_mat_mass_mm.append(y_vec_eng_mm)
+        x_mat_q_mm.append(x_vec_eng_mm)
+        y_mat_q_mm.append(y_vec_eng_mm)
+    
+    x_mat_q_mm = np.array(x_mat_q_mm).flatten()
+    y_mat_q_mm = np.array(y_mat_q_mm).flatten()
+                            
+        
+
+    fig = plt.figure()
+    
+    manager = plt.get_current_fig_manager()
+    try:
+        window = manager.window
+     
+        window.geometry("1540x900+-10+0")   # WxH+x_offset+y_offset
+    except Exception as e:
+        print("Could not resize window:", e)
+
+    ax = fig.add_subplot(111)  
+    
+    h = plt.hist2d(x_mat_q_mm, y_mat_q_mm, bins=100,
+           range=[[-integrator_loc.width_mm/2, integrator_loc.width_mm/2], [0, integrator_loc.depth_mm]],
+           cmap='viridis')
+    
+    cbar = plt.colorbar(h[3], ax=ax)
+    cbar.set_label('counts', fontsize=25)   
+    cbar.ax.tick_params(labelsize=18)
+    plt.xlabel('Width (mm)',fontsize=25)
+    plt.ylabel('Depth (mm)',fontsize=25)
+    ax.tick_params(axis='both', labelsize=18)
+    ax.axis('equal')
+    
+    
+    
+    
+    return
+
 def plot_field_quiver(ax,integrator):
     Bx0_T     = integrator.Bx0_T
     Ex0_Vm    = integrator.Ex0_Vm 
@@ -330,36 +411,36 @@ def convergence_test (integrator,integrators_name, experiment, engs_MeV,N_steps_
     def _linera_rig(x,a,b):
         return a * x + b
     Y_analitic = integrator._analitic_sol_vel2dist()
-    n_fine = np.linspace(N_steps_vec[0],N_steps_vec[-1],1001)
+    n_fine = np.linspace(N_steps_vec[0],N_steps_vec[-2],1001)
     power_map = {"Boris": -1,"Boris_Coll": -2 ,"RK2": -2, "RK4_Lin" : -2 ,"RK4_Herm": -4, "Euler": -1}
     count = 0
     for n in range (len(integrators_name)):
         count += 0.05
         integrator_name = integrators_name[n]
-        # Y_min = R_ends_mm[n][-1][1]
-        # epsilon = np.abs([Y_min - r[1] for r in R_ends_mm[n]])
-        epsilon = np.abs([Y_analitic - r[1] for r in R_ends_mm[n]])
+        Y_min = R_ends_mm[n][-1][1]
+        epsilon = np.abs([Y_min - r[1] for r in R_ends_mm[n]])
+        # epsilon = np.abs([Y_analitic - r[1] for r in R_ends_mm[n]])
         # print(f"{integrators_name[n]}: epsilon = {epsilon}")
         power = power_map[integrator_name]
         log_eps = np.log10(epsilon[:-1])
         log_N = np.log10(N_steps_vec[:-1])
-        popt, pcov = curve_fit(_linera_rig, log_N, log_eps, p0=[power,0],bounds=([-6, -np.inf],[  0,  np.inf]),maxfev=10000)
+        popt, pcov = curve_fit(_linera_rig, log_N[:], log_eps[:], p0=[power,0],bounds=([-6, -np.inf],[  0,  np.inf]),maxfev=10000)
         a_fit, b_fit = popt
         print(a_fit)
         # eps_fine = _power_law(n_fine,a_fit,b_fit)
-        eps_fine = 10**(_linera_rig(np.log10(n_fine),a_fit,b_fit))
+        eps_fine = 10**(_linera_rig(np.log10(n_fine[:]),a_fit,b_fit))
         
         color = colors[integrator_name]
         N_mid_log = 10**((0.5+count)*(np.log10(N_steps_vec[0]) + np.log10(N_steps_vec[-2])))
         eps_mid_on_fit = 10**(_linera_rig(np.log10(N_mid_log), a_fit, b_fit))
         
         
-        ax.text(N_mid_log , eps_mid_on_fit*10,
+        ax.text(N_mid_log/2 , eps_mid_on_fit*5,
                 rf"$p = {a_fit:.2f}$",
                 color=color, fontsize=25, ha='center', va='bottom',
                 fontweight='bold')
         label = integrator_name
-        ax.scatter(N_steps_vec[:], epsilon[:], color=color, alpha=0.6, s=300,
+        ax.scatter(N_steps_vec[:-1], epsilon[:-1], color=color, alpha=0.6, s=300,
                    edgecolor='black', linewidth=0.5, label=label)
         ax.plot(n_fine,eps_fine, color=color, linewidth=3)
         
@@ -371,31 +452,32 @@ def convergence_test (integrator,integrators_name, experiment, engs_MeV,N_steps_
         ax.set_yscale('log')
         
         ax.legend(title='Integrator',title_fontsize=25,fontsize=18)
-    
+
     
     return    
 def Non_collimataed_beams(integrator,integrator_name, experiment,N_steps, total_energy,number_of_experiments, angular_distribution, angular_scale = 0.01,show_tragectories = True, show_map = True):
     params = experiment.params
     Noe = number_of_experiments
     
-    if angular_distribution == "Exponential":
+    if angular_distribution == "Exponential" or  angular_distribution == ["Exponential"]:
         
         phi_rad = np.random.exponential(np.pi * angular_scale,Noe) * np.random.choice([-1, 1], size=Noe)  
         theta_rad = np.random.exponential(np.pi/2 *  angular_scale,Noe) * np.random.choice([-1, 1], size=Noe)  
         # total_energy_vec = total_energy * np.ones(Noe)
         
         
-    elif angular_distribution == "Gaussian":
+    elif angular_distribution == "Gaussian" or  angular_distribution == ["Gaussian"]:
         phi_rad = np.random.normal(loc=0.0, scale=np.pi*angular_scale, size=Noe)
         theta_rad = np.random.normal(loc=0.0, scale=np.pi/2*angular_scale, size=Noe)
     
-    elif angular_distribution == "Uniform":
+    elif angular_distribution == "Uniform" or  angular_distribution == ["Uniform"]:
         phi_rad = np.random.uniform(low=-np.pi*angular_scale, high = np.pi*angular_scale, size=Noe)
         theta_rad = np.random.uniform(low=-np.pi/2*angular_scale, high=-np.pi/2*angular_scale, size=Noe)
         
-    elif angular_distribution == "None":
+    elif angular_distribution == "None" or  angular_distribution == ["None"]:
         phi_rad = np.zeros(Noe)
         theta_rad = np.zeros(Noe)
+    # print(theta_rad)
         
     engs_MeV = velocity_devider (total_energy,theta_rad ,phi_rad)
     R_engs_vec_mm = []
@@ -476,14 +558,16 @@ def real_beams(integrator,integrator_name, experiment,N_steps, total_energy_scal
        total_energys = total_energy_scalar_MeV * np.ones(Noe)
     
     
-    number_of_angular_experiments = 1
+    number_of_angular_experiments = Noe
     R_engs_mat_mm =[]
     
     n_cpus = os.cpu_count();
     n_jobs = n_cpus
+    integrator_loc = copy.deepcopy(integrator)
+    experiment_loc = copy.deepcopy(experiment)
     total_energys = np.atleast_2d(total_energys)
-    results = Parallel(n_jobs=n_jobs, backend="multiprocessing")(
-        delayed(Non_collimataed_beams)(integrator,integrator_name, experiment,N_steps, total_energy,
+    results = Parallel(n_jobs=2, backend="multiprocessing")(
+        delayed(Non_collimataed_beams)(integrator_loc,integrator_name, experiment,N_steps, total_energy,
                                        number_of_angular_experiments, angular_distribution, angular_scale = angular_scale,
                                        show_tragectories = False, show_map = False)  for total_energy in total_energys) 
     
@@ -607,7 +691,7 @@ def TNSA(integrator,integrator_name, experiment,N_steps, total_energy_scalars_Me
         plt.xlabel('Widthh (mm)',fontsize=25)
         ax.tick_params(axis='both', labelsize=18)
         ax.axis('equal')
-        ax.set_title(f"{pecent} of the particle passed the ditector with {angular_distribution} angular distribution havig scale of {angular_scale}*$\pi$ for $\phi$ and {angular_scale}*$\pi/2$ for $\theta$")
+        # ax.set_title(f"{pecent} of the particle passed the ditector with {angular_distribution} angular distribution havig scale of {angular_scale}*$\pi$ for $\phi$ and {angular_scale}*$\pi/2$ for $\theta$")
 
     
 

@@ -3,7 +3,9 @@
 #plt.close('all'); get_ipython().run_line_magic('clear', ''); get_ipython().run_line_magic('reset', '-f');
 
 
+# %%
 import matplotlib.pyplot as plt
+
 import numpy as np
 from types import SimpleNamespace
 
@@ -16,6 +18,7 @@ from spectrometer.integrators import Integrators
 import spectrometer.plot_result as pr
 import spectrometer.analitic_fields as analitic_fields
 from spectrometer.simulators import *
+import copy
 
 
 
@@ -23,13 +26,14 @@ from spectrometer.simulators import *
 if __name__ == "__main__":
    
     
-    me_kg = 9.109*1e-31
-    R0_mm  = np.array([0,-15,0])
+    me_kg =9.109*1e-31 #9.109*1e-31
+    R0_mm  = np.array([0,-10,0])
     e_C = -1.602*1e-19
     e_eng_MeV = np.array([0,10,0])
     height_mm =26; width_mm = 12.5; depth_mm   = 50.8
     Bx0_T = 0.5
-    Ex0_Vm = -5e7
+    Ex0_Vm = 1e8
+
     yoke = 0
     shield_mm = 5
     pinhole_dia_mm = 3
@@ -37,14 +41,14 @@ if __name__ == "__main__":
     CFL = 0.05
     N_steps = 5*1e3
     pinhole_dia_mm = 3
-    solution =    "Analitic field" #  "Numeric Field" # "Analitic field" #  
+    solution =    "Numeric Field"  #  "Numeric Field" # "Analitic field" #  
     rand = "uni" # exp #gauss # "None"
     sharp_edge = 1
     
-    Nx_p = 2**8 + 1;
-    Ny_p = 2**8 + 1;
+    Nx_p = 2**4 + 1;
+    Ny_p = 2**4 + 1;
     
-
+    grid_interpulation = "Linear" # "Spline"#
     # spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
     # fig,ax = spec._draw_spec()
     
@@ -53,13 +57,13 @@ if __name__ == "__main__":
                             R0_mm= R0_mm, q_eng_MeV = e_eng_MeV, m_kg = me_kg, q_C = e_C, # Particle parameters
                             Bx0_T = Bx0_T, Ex0_Vm = Ex0_Vm, fringe = fringe, sharp_edge = sharp_edge, # Fildes parameters
                             CFL = CFL, N_steps = N_steps, solution = solution, # Simulation resolutions
-                            Nx_p = Nx_p, Ny_p = Ny_p # Potential solving
+                            Nx_p = Nx_p, Ny_p = Ny_p, grid_interpulation = grid_interpulation, # Potential solving
                             )
        
     experiment._evaluate_exp_paramas()
     params = experiment.params
-    
-# %%    #_________________Integration environment intitiation__________________
+   
+    # %%    #_________________Integration environment intitiation__________________
     if True:#False:
         params["solution"] = "Analitic field"
     
@@ -68,15 +72,38 @@ if __name__ == "__main__":
     if False:#True:
         params["solution"] = "Numeric Field"
         integrator = Integrators(params)
-        integrator.psi._show_potential()
-        integrator.mag._show_field()
-        integrator.phi._show_potential()
-        integrator.Ele._show_field()
         
+        # integrator.psi._show_potential()
+        # integrator.mag._show_field()
+        # integrator.phi._show_potential()
+        # integrator.Ele._show_field()
+        
+    params_beckup = copy.deepcopy(params)
+    #%%    Fully analitic assuming no velocity in Z direction, no fringe fields
+    if True:
+        params = copy.deepcopy(params_beckup)
+        params["Ex0_Vm"] = 5e7
+        params["R0_mm"] = np.array([0,-4,0])
+        
+        params = experiment._update_params(params)
+        # integrator.mag.interpolation
+        params = integrator._update_params(params)
+        e_engs_vec_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,1001)])
+        m_kg_vec  =[9.109*1e-31,9.1e-30]# [9.1e-30]#[9.109*1e-31,9.1e-30]
+        q_vec_C = [-1.602*1e-19,-1.602*1e-18] #[-1.602*1e-18]#[-1.602*1e-19,-1.602*1e-18]
+        # params["q_eng_MeV"] = np.array([10,10,0])
+        Fully_analitic(integrator,experiment,e_engs_vec_MeV,m_kg_vec,q_vec_C)
+        
+        
+        
+        
+        
+    # %%    #___________________________Basic simuations_______________________
     
     
-# %%    #___________________________Basic simuations___________________________
+    
     if False:
+        
         e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,15)])
         # e_engs_MeV = np.array([-0.005,2,0.005])# When using this, it is better to work with velocity in the y driection so the energy will not exceed the speed of light
         
@@ -84,20 +111,26 @@ if __name__ == "__main__":
         basic_simulator(integrator,integrator_name, experiment, e_engs_MeV,show_tragectories = True)
     
 
-# %%    #___________________________Converssion Tests__________________________
-    if True:
-        integrators_name =["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#,#,"RK4"]#["RK4","Euler"]#
-        params["fringe"] = 0
-        params["Ex0_Vm"] = 0
-        params["R0_mm"] = np.array([0,0,0])
+    # %%    #___________________________Converssion Tests______________________
+    if False:
+        params = copy.deepcopy(params_beckup)
+        integrators_name =["RK4_Herm"]#, "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
+        params["fringe"] = 1
+        params["Ex0_Vm"] = Ex0_Vm
+        params["R0_mm"] = np.array([0,-4,0])
+        params["grid_interpulation"] = "Spline"#"Spline"# "Linear"
         params = experiment._update_params(params)
-        integrator._update_params(params)
+        # integrator.mag.interpolation
+        params = integrator._update_params(params)
         integrator._update_solution(integrator.solution)
-        e_engs_MeV = np.array([0, 4, 0])
-        N_steps_vec = [1e2,5e2,1e3,1e4,1e5]
+        e_engs_MeV = np.array([0, 3, 0])
+        # N_steps_vec = [1e2,5e2,1e3,1e4]
+# %%
+        N_steps_vec = [25,50,100,200,400,800,1600,3200,6400]
+
         convergence_test (integrator,integrators_name, experiment, e_engs_MeV,N_steps_vec)
         
-      
+          
 # %%    # ___________________________Boris Tests_______________________________  
     if False:
         def _compare_boris_vs_rk4(integrator, experiment, N_steps_test=5000):
@@ -399,64 +432,85 @@ if __name__ == "__main__":
             # print(R_vec_rk4)
             # print(R_vec_boris)
 
-# %%    # _____________Energy Vs N_steps Vs Integrator_________________________
+    # %%    # _____________Energy Vs N_steps Vs Integrator_____________________
     if False:
-         integrators_name = ["RK4","Boris","RK2"]#["Boris","RK2","RK4","Euler"]
-         # e_engs_MeV = np.array([[0,6,0],[0,10,0],[0,16,0]])
-         e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,4)])
-         N_steps_vec = [1e2,5e2,1e3,4e3,1e4]#,4e3,5e3,1e4,3e4,5e4]
+        params = copy.deepcopy(params_beckup)
+        integrators_name =["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]
+        params["fringe"] = 0
+        params["Ex0_Vm"] = 0
+        params["R0_mm"] = np.array([0,0,0])
+        params = experiment._update_params(params)
+        integrator._update_params(params)
+        integrator._update_solution(integrator.solution)
+        e_engs_MeV = np.array([0,5,0])
+        N_steps_vec = [1e2]#,4e3,5e3,1e4,3e4,5e4]
          
-         energy_vs_N_steps_for_different_integrators(integrator,integrators_name, experiment, e_engs_MeV,N_steps_vec)
+        energy_vs_N_steps_for_different_integrators(integrator,integrators_name, experiment, e_engs_MeV,N_steps_vec)
         
         
-# %%
-     # _____________________Non_collimataed_beams_________________________
+    # %%# _____________________Non_collimataed_beams___________________________
     
     if False:
-        integrators_name = ["Boris"]#["Boris","RK2","RK4","Euler"]
-        e_engs_MeV_scalar = 10
-        N_steps_vec = 1e2#,4e3,5e3,1e4,3e4,5e4]
-        number_of_experiments = 50
+        params = copy.deepcopy(params_beckup)
+        integrators_name = ["RK4_Herm"]#["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]
+        params["fringe"] = 1
+        params["Ex0_Vm"] = 1e-7
+        params["R0_mm"] = np.array([0,-3,0])
+        params = experiment._update_params(params)
+        integrator._update_params(params)
+        # integrator._update_solution(integrator.solution)
+        
+        e_engs_MeV_scalar = 4
+        N_steps_vec = 5e2#,4e3,5e3,1e4,3e4,5e4]
+        number_of_experiments = 1000
         angular_distribution = "Exponential"#"Uniform" #"Gaussian" #"Exponential"
         Non_collimataed_beams(integrator,integrators_name, experiment,N_steps_vec, e_engs_MeV_scalar, number_of_experiments, angular_distribution,angular_scale=0.03, show_tragectories = False, show_map = True)
         
-# %%
-     # ______________Real_beams - spectral distribution__________________ 
+    # %% # ______________Real_beams - spectral distribution__________________ 
     if False:
-        integrator_name = ["Boris"]#["Boris","RK2","RK4","Euler"]
+        
+        integrator_name = ["RK4_Lin"]#["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]
+        params["fringe"] = 0
+        params["Ex0_Vm"] = 1e6
+        params["R0_mm"] = np.array([0,-5,0])
+        params = experiment._update_params(params)
+        integrator._update_params(params)
+        integrator._update_solution(integrator.solution)
+        
         e_engs_MeV_scalar = 4
-        N_steps_vec = 1e2#,4e3,5e3,1e4,3e4,5e4]
-        number_of_experiments = 15
-        angular_distribution = "None"#"Gaussian" #"None"#,"Uniform" #"Gaussian" #"Exponential"
+        N_steps_vec = 5e2#,4e3,5e3,1e4,3e4,5e4]
+        number_of_experiments = 1000
+        angular_distribution = "Gaussian"#"Gaussian" #"None"#,"Uniform" #"Gaussian" #"Exponential"
         energy_distribution =  "DLA" #"None"#"Uniform" #"Gaussian" #"Exponential" 
-        angular_scale = 0.03
+        angular_scale = 0.005
         energy_scale = 0.1
         real_beams(integrator = integrator,integrator_name =integrator_name, experiment =experiment,
                    N_steps = N_steps, total_energy_scalar_MeV = e_engs_MeV_scalar, energy_distribution= energy_distribution, energy_scale = energy_scale,
                    number_of_experiments = number_of_experiments, angular_distribution = angular_distribution,
                    angular_scale=angular_scale, show_tragectories = False, show_map = True)
-# %%
-     # _______________________TNSA - experiment_________________________
-    if False:
-        Ex0_Vm = 7*1e5
-        params["Ex0_Vm"] = Ex0_Vm
+    # %% # _______________________TNSA - experiment_________________________
+    if True:
+        params = copy.deepcopy(params_beckup)
+        params = experiment.params 
+        integrator_name = ["RK4_Lin"]#["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]
+        params["fringe"] = 1
+        params["Ex0_Vm"] = 5e7
+        params["R0_mm"] = np.array([0,-4,0])
         params = experiment._update_params(params)
         integrator._update_params(params)
         integrator._update_solution(integrator.solution)
         
         
         
-        integrator_name = ["Boris"]#["Boris","RK2","RK4","Euler"]
-        e_engs_MeV_scalars = 0.5
-        N_steps_vec = 1e2#,4e3,5e3,1e4,3e4,5e4]
-        number_of_experiments = 12
-        angular_distribution = "None"#"Gaussian" #"None"#,"Uniform" #"Gaussian" #"Exponential"
+        N_steps_vec = 5e2#,4e3,5e3,1e4,3e4,5e4]
+        number_of_experiments = 1000
+        angular_distribution = "Gaussian"#"Gaussian" #"None"#,"Uniform" #"Gaussian" #"Exponential"
         energy_distribution =  "DLA" #"None"#"Uniform" #"Gaussian" #"Exponential"#"DLA"
-        angular_scale = 0.03
+        angular_scale = 0.005
         energy_scale = 0.1
-        e_engs_MeV_scalars = [4,6]
-        mq_vec_kg = [9.109*1e-31,1.67*1e-27]
-        q_vec_C = [-1.602*1e-19,-1.602*1e-19]
+        e_engs_MeV_scalars = [3,0.1]
+        mq_vec_kg = [9.109*1e-31,9.1e-30]
+        q_vec_C = [-1.602*1e-19,-1.602*1e-18]
  
         TNSA (integrator = integrator,integrator_name =integrator_name, experiment =experiment, mq_vec_kg = mq_vec_kg, q_vec_C = q_vec_C,
                    N_steps = N_steps, total_energy_scalars_MeV = e_engs_MeV_scalars, energy_distribution= energy_distribution, energy_scale = energy_scale,
@@ -466,7 +520,7 @@ if __name__ == "__main__":
         
         
             
-        
+#%%        
     # if True:
     #     integrator_name = ["Boris"]#["Boris","RK2","RK4","Euler"]
     #     e_engs_MeV_scalar = 4
