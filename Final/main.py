@@ -64,12 +64,12 @@ if __name__ == "__main__":
     params = experiment.params
    
     # %%    #_________________Integration environment intitiation__________________
-    if True:#False:
+    if False:#False:
         params["solution"] = "Analitic field"
     
         integrator = Integrators(params)
     
-    if False:#True:
+    if True:#True:
         params["solution"] = "Numeric Field"
         integrator = Integrators(params)
         
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     
     
     
-    if False:
+    if True:
         
         e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,15)])
         # e_engs_MeV = np.array([-0.005,2,0.005])# When using this, it is better to work with velocity in the y driection so the energy will not exceed the speed of light
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     
 
     # %%    #___________________________Converssion Tests______________________
-    if False:
+    if True:
         params = copy.deepcopy(params_beckup)
         integrators_name =["Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
         params["fringe"] = 1
