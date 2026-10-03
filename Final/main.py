@@ -39,14 +39,14 @@ if __name__ == "__main__":
     pinhole_dia_mm = 3
     fringe = 1
     CFL = 0.05
-    N_steps = 5*1e3
+    N_steps = 5*1e2
     pinhole_dia_mm = 3
     solution =    "Numeric Field"  #  "Numeric Field" # "Analitic field" #  
     rand = "uni" # exp #gauss # "None"
     sharp_edge = 1
     
-    Nx_p = 2**4 + 1;
-    Ny_p = 2**4 + 1;
+    Nx_p = 2**6 + 1;
+    Ny_p = 2**6 + 1;
     
     grid_interpulation = "Linear" # "Spline"#
     # spec = Spectrometer_Budy(shield_mm = shield_mm, yoke=yoke)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         
         params = experiment._update_params(params)
         # integrator.mag.interpolation
-        params = integrator._update_params(params)
+        integrator._update_params(params)
         e_engs_vec_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,1001)])
         m_vec_kg  =[9.109*1e-31, 5*9.1*1e-31]# [9.1e-30]#[9.109*1e-31,9.1e-30]
         q_vec_C = [-1.602*1e-19,0.5*-1.602*1e-19]#[-1.602*1e-18]#[-1.602*1e-19,-1.602*1e-18]
@@ -102,9 +102,13 @@ if __name__ == "__main__":
     
     
     
-    if True:
-        
+    if False:
+        params["Ex0_Vm"] = -5e7
+        params["R0_mm"] = np.array([0,-4,0])
         e_engs_MeV = np.array([ [0,i,0] for i in np.linspace(1,15,15)])
+        params = experiment._update_params(params)
+        integrator._update_params(params)
+        integrator._update_solution(integrator.solution)
         # e_engs_MeV = np.array([-0.005,2,0.005])# When using this, it is better to work with velocity in the y driection so the energy will not exceed the speed of light
         
         integrator_name = "Boris"#"Euler"#"RK4"#"RK2"
@@ -114,11 +118,11 @@ if __name__ == "__main__":
     # %%    #___________________________Converssion Tests______________________
     if True:
         params = copy.deepcopy(params_beckup)
-        integrators_name =["Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
+        integrators_name =["RK4_Herm"] #["Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
         params["fringe"] = 1
         params["Ex0_Vm"] = Ex0_Vm
         params["R0_mm"] = np.array([0,-4,0])
-        params["grid_interpulation"] = "Spline"#"Spline"# "Linear"
+        params["grid_interpulation"] = "Linear"#"Spline"#"Spline"# "Linear"
         params = experiment._update_params(params)
         # integrator.mag.interpolation
         integrator._update_params(params)
