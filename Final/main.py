@@ -118,11 +118,11 @@ if __name__ == "__main__":
     # %%    #___________________________Converssion Tests______________________
     if True:
         params = copy.deepcopy(params_beckup)
-        integrators_name =["RK4_Herm"] #["Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
+        integrators_name =  ["Euler","Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]#["RK4_Herm"]#
         params["fringe"] = 1
-        params["Ex0_Vm"] = Ex0_Vm
+        params["Ex0_Vm"] = 1e6
         params["R0_mm"] = np.array([0,-4,0])
-        params["grid_interpulation"] = "Linear"#"Spline"#"Spline"# "Linear"
+        params["grid_interpulation"] = "Linear"#"Spline"# "Linear"
         params = experiment._update_params(params)
         # integrator.mag.interpolation
         integrator._update_params(params)
@@ -193,7 +193,7 @@ if __name__ == "__main__":
                    number_of_experiments = number_of_experiments, angular_distribution = angular_distribution,
                    angular_scale=angular_scale, show_tragectories = False, show_map = True)
     # %% # _______________________TNSA - experiment_________________________
-    if True:
+    if False:
         params = copy.deepcopy(params_beckup)
         params = experiment.params 
         integrator_name = ["RK4_Herm"]#["Euler", "Boris","Boris_Coll","RK2","RK4_Lin", "RK4_Herm"]
